@@ -145,7 +145,7 @@ class PatientTimelineApp:
             
             # Generate random event types
             event_types = random.choices(
-                ['imaging', 'ambulatory_visit', 'hospitalization', 'medication_change', 'lab_test'], 
+                ['Imaging', 'Ambulatory Visit', 'Hospitalization', 'Medication Change', 'Lab Test'], 
                 k=event_count
             )
             
@@ -669,12 +669,12 @@ def create_app_with_args():
         return app
     else:
         print("No command specified. Available commands:")
-        print("  python script.py group-a    # Access patients 1-100")
-        print("  python script.py group-b    # Access patients 101-200") 
-        print("  python script.py group-c    # Access patients 201-300")
-        print("  python script.py custom --start 1 --end 50 --name 'My Group'")
-        print("  python script.py admin      # Access all patients")
-        print("  python script.py dev        # Development mode with sample data")
+        print("  python webapp.py group-a    # Access patients 1-100")
+        print("  python webapp.py group-b    # Access patients 101-200") 
+        print("  python webapp.py group-c    # Access patients 201-300")
+        print("  python webapp.py custom --start 1 --end 50 --name 'My Group'")
+        print("  python webapp.py admin      # Access all patients")
+        print("  python webapp.py dev        # Development mode with sample data")
         sys.exit(1)
 
 def create_interface():
