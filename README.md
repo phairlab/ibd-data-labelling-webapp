@@ -69,31 +69,31 @@ Files should contain "events" in the filename (e.g., `patient_events_2024.csv`)
 #### **Research Teams (Predefined Groups)**
 ```bash
 # Group A: Patients 1-100
-python app.py group-a
+python webapp.py group-a
 
 # Group B: Patients 101-200
-python app.py group-b
+python webapp.py group-b
 
 # Group C: Patients 201-300
-python app.py group-c
+python webapp.py group-c
 ```
 
 #### **Custom Patient Cohorts**
 ```bash
 # Custom range with naming
-python app.py custom --start 50 --end 150 --name "Pediatric Cohort"
+python webapp.py custom --start 50 --end 150 --name "Pediatric Cohort"
 
 # Simple custom range
-python app.py custom --start 1 --end 25
+python webapp.py custom --start 1 --end 25
 ```
 
 #### **Special Access Modes**
 ```bash
 # Administrator access (all patients)
-python app.py admin
+python webapp.py admin
 
 # Development mode (sample data)
-python app.py dev --patients 100
+python webapp.py dev --patients 100
 ```
 
 The application will launch in your default browser with access restricted to your specified patient group.
@@ -166,17 +166,6 @@ All filtering, flare management, and chart interactions update immediately witho
 - Data filtering at application level
 - Secure patient ID range enforcement
 
-### **Team-Based Access**
-```bash
-# Clinical team
-python app.py group-a
-
-# Research team  
-python app.py group-b
-
-# Analysis team
-python app.py custom --start 200 --end 300 --name "Analysis Cohort"
-```
 
 ## 📈 Use Cases
 
