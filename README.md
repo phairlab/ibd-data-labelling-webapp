@@ -217,16 +217,6 @@ python app.py custom --start 200 --end 300 --name "Analysis Cohort"
 - Large datasets may require filtering to specific patient ranges
 - Use development mode for testing with sample data
 
-## 🆚 Version Comparison
-
-| Feature | Web Application | Desktop Application |
-|---------|----------------|-------------------|
-| **Deployment** | Browser-based | Standalone executable |
-| **Access Control** | Command-line groups | Single-user |
-| **Data Loading** | Directory-based | File upload |
-| **Multi-user** | ✅ Yes | ❌ No |
-| **IBD Filtering** | ✅ Yes | ❌ No |
-| **Lab Test Separation** | ✅ Yes | ❌ No |
 
 ## 🤝 Contributing
 
@@ -236,9 +226,6 @@ python app.py custom --start 200 --end 300 --name "Analysis Cohort"
 4. Push to branch (`git push origin feature/new-feature`)
 5. Create a Pull Request
 
-## 📝 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## 🙏 Acknowledgments
 
