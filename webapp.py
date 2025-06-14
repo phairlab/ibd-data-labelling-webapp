@@ -145,7 +145,7 @@ class PatientTimelineApp:
             
             # Generate random event types
             event_types = random.choices(
-                ['Imaging', 'Ambulatory Visit', 'Hospitalization', 'Medication Change', 'Lab Test'], 
+                ['imaging', 'ambulatory_visit', 'hospitalization', 'medication_change', 'lab_test'], 
                 k=event_count
             )
             
@@ -209,10 +209,10 @@ class PatientTimelineApp:
     def load_patient_timeline(self, patient_id, ibd_filter="All Events"):
         """Load timeline for selected patient with IBD filtering"""
         if self.combined_data is None:
-            return None, "Please load patient data first", "", gr.update(choices=[]), "", "", "", gr.update(visible=False)
+            return None, "Please load patient data first", "", gr.update(choices=[]), "", "", [], "", gr.update(visible=False)
         
         if not patient_id:
-            return None, "Please select a patient ID", "", gr.update(choices=[]), "", "", "", gr.update(visible=False)
+            return None, "Please select a patient ID", "", gr.update(choices=[]), "", "", [], "", gr.update(visible=False)
         
         try:
             # Filter data for selected patient
@@ -241,12 +241,18 @@ class PatientTimelineApp:
             info = self.get_chart_info()
             flare_choices = gr.update(choices=self.get_flare_list())
             
+            # Get available categories for checkboxes
+            if patient_data is not None and len(patient_data) > 0:
+                available_categories = patient_data['event_type'].unique().tolist()
+            else:
+                available_categories = []
+            
             status_msg = f"Chart loaded for Patient {self.current_patient_id} ({ibd_filter})"
             
-            return fig, status_msg, info, flare_choices, "", "", "", gr.update(visible=False)
+            return fig, status_msg, info, flare_choices, "", "", [], "", gr.update(visible=False)
             
         except Exception as e:
-            return None, f"Failed to load patient timeline: {str(e)}", "", gr.update(choices=[]), "", "", "", gr.update(visible=False)
+            return None, f"Failed to load patient timeline: {str(e)}", "", gr.update(choices=[]), "", "", [], "", gr.update(visible=False)
     
     def load_existing_flares(self):
         """Load existing flares from JSON file"""
@@ -260,8 +266,15 @@ class PatientTimelineApp:
                     for flare in saved_ranges:
                         flare_start = pd.to_datetime(flare['start_date'])
                         flare_end = pd.to_datetime(flare['end_date'])
-                        flare_reason = flare['reason']
-                        self.ranges.append((flare_start, flare_end, flare_reason))
+                        # Handle both old and new format
+                        if 'categories' in flare:
+                            categories = flare['categories']
+                            reason = flare.get('reason', '')
+                            self.ranges.append((flare_start, flare_end, categories, reason))
+                        else:
+                            # Old format compatibility
+                            reason = flare.get('reason', '')
+                            self.ranges.append((flare_start, flare_end, [], reason))
             except Exception as e:
                 print(f"Error loading flares: {e}")
     
@@ -358,6 +371,23 @@ class PatientTimelineApp:
                 width=0.9,  # Make bars thicker
             )
         
+        # Get unique event types and create custom labels
+        unique_event_types = data['event_type'].unique()
+        
+        # Create mapping for custom labels
+        label_mapping = {
+            'ambulatory_visit': 'Ambulatory Visit',
+            'lab_test': 'Lab Test',
+            'prescription': 'Prescription',
+            'physician_claim': 'Physician Claim',
+            'hospital_admission': 'Hospital Admission',
+            'imaging': 'Imaging'
+        }
+        
+        # Create custom labels for the event types present in data
+        custom_labels = [label_mapping.get(event_type, event_type.replace('_', ' ').title()) 
+                        for event_type in unique_event_types]
+        
         # Update layout
         fig.update_layout(
             xaxis_title="Time",
@@ -374,7 +404,11 @@ class PatientTimelineApp:
             autosize=True,
             margin=dict(l=50, r=50, t=50, b=50),
             height=600,
-            hovermode='closest'
+            hovermode='closest',
+            yaxis=dict(
+                ticktext=custom_labels,
+                tickvals=list(unique_event_types)
+            )
         )
         
         # Add flare periods
@@ -388,8 +422,25 @@ class PatientTimelineApp:
         if not self.ranges:
             return
         
+        # Create label mapping for display
+        label_mapping = {
+            'ambulatory_visit': 'Ambulatory Visit',
+            'lab_test': 'Lab Test',
+            'prescription': 'Prescription',
+            'physician_claim': 'Physician Claim',
+            'hospital_admission': 'Hospital Admission',
+            'imaging': 'Imaging'
+        }
+        
         # Add flare periods
-        for i, (start_date, end_date, reason) in enumerate(self.ranges):
+        for i, flare_data in enumerate(self.ranges):
+            # Handle both old and new format
+            if len(flare_data) == 3:  # Old format: (start, end, reason)
+                start_date, end_date, reason = flare_data
+                categories = []
+            else:  # New format: (start, end, categories, reason)
+                start_date, end_date, categories, reason = flare_data
+            
             start_date = pd.to_datetime(start_date)
             end_date = pd.to_datetime(end_date)
             
@@ -402,7 +453,20 @@ class PatientTimelineApp:
             
             # Add markers
             y_pos = len(data['event_type'].unique()) - 0.75
-            wrapped_reason = "<br>".join(textwrap.wrap(reason, width=100))
+            
+            # Create hover text with categories
+            hover_text_parts = [f"<b>Flare:</b> {start_date.date()} to {end_date.date()}"]
+            
+            if categories:
+                # Convert categories to readable labels
+                readable_categories = [label_mapping.get(cat, cat.replace('_', ' ').title()) for cat in categories]
+                hover_text_parts.append(f"<b>Categories:</b><br>{'<br>'.join(readable_categories)}")
+            
+            if reason:
+                wrapped_reason = "<br>".join(textwrap.wrap(reason, width=50))
+                hover_text_parts.append(f"<b>Reason:</b><br>{wrapped_reason}")
+            
+            hover_text = "<br><br>".join(hover_text_parts)
             
             fig.add_trace(
                 go.Scatter(
@@ -411,99 +475,143 @@ class PatientTimelineApp:
                     mode='markers',
                     marker=dict(size=10, color='LightSeaGreen', symbol='triangle-down'),
                     hoverinfo='text',
-                    hovertext=[
-                        f"<b>Flare Start:</b><br>{start_date.date()}<br><b>Reason:</b><br>{wrapped_reason}",
-                        f"<b>Flare End:</b><br>{end_date.date()}<br><b>Reason:</b><br>{wrapped_reason}"
-                    ],
+                    hovertext=[hover_text, hover_text],
                     showlegend=False,
                     name=f'Flare {i+1} Boundaries'
                 )
             )
         
-        # Update y-axis to accommodate flare markers
-        y_categories = list(data['event_type'].unique())
+        # Update y-axis range to accommodate flare markers, but preserve custom labels
+        unique_event_types = data['event_type'].unique()
         fig.update_layout(
             yaxis=dict(
                 categoryorder='array',
-                categoryarray=y_categories,
-                range=[-0.75, len(y_categories)+0.06],
-                tickvals=list(range(len(y_categories))),
-                ticktext=y_categories,
+                categoryarray=list(unique_event_types),
+                range=[-0.75, len(unique_event_types)+0.06],
+                # Preserve the custom tick labels that were set earlier
+                tickvals=list(unique_event_types),
+                ticktext=[fig.layout.yaxis.ticktext[i] if fig.layout.yaxis.ticktext else event_type 
+                         for i, event_type in enumerate(unique_event_types)]
             )
         )
     
-    def add_flare(self, start_date, end_date, reason):
+    def add_flare(self, start_date, end_date, categories, reason):
         """Add a new flare period"""
         if self.current_patient_data is None:
-            return None, "Please load a patient timeline first", start_date, end_date, reason, gr.update(choices=[]), gr.update(visible=False)
+            return None, "Please load a patient timeline first", start_date, end_date, categories, reason, gr.update(choices=[]), gr.update(visible=False)
         
         if not start_date or not end_date:
-            return None, "Please enter both start and end dates", start_date, end_date, reason, gr.update(choices=self.get_flare_list()), gr.update(visible=False)
+            return None, "Please enter both start and end dates", start_date, end_date, categories, reason, gr.update(choices=self.get_flare_list()), gr.update(visible=False)
+        
+        if not categories:
+            return None, "Please select at least one category", start_date, end_date, categories, reason, gr.update(choices=self.get_flare_list()), gr.update(visible=False)
         
         try:
             start_date_parsed = pd.to_datetime(start_date)
             end_date_parsed = pd.to_datetime(end_date)
-            reason = reason or "No reason provided"
+            reason = reason or ""  # Reason is now optional
             
             if end_date_parsed < start_date_parsed:
-                return None, "End date must be after start date", start_date, end_date, reason, gr.update(choices=self.get_flare_list()), gr.update(visible=False)
+                return None, "End date must be after start date", start_date, end_date, categories, reason, gr.update(choices=self.get_flare_list()), gr.update(visible=False)
             
-            self.ranges.append((start_date_parsed, end_date_parsed, reason))
+            # Convert readable labels back to internal format
+            label_to_internal = {
+                'Ambulatory Visit': 'ambulatory_visit',
+                'Lab Test': 'lab_test',
+                'Prescription': 'prescription',
+                'Physician Claim': 'physician_claim',
+                'Hospital Admission': 'hospital_admission',
+                'Imaging': 'imaging'
+            }
+            internal_categories = [label_to_internal.get(cat, cat.lower().replace(' ', '_')) for cat in categories]
+            
+            # Store flare with categories
+            self.ranges.append((start_date_parsed, end_date_parsed, internal_categories, reason))
             
             # Recreate chart with new flare
             fig = self.create_timeline()
             
-            return fig, f"Added flare: {start_date_parsed.date()} to {end_date_parsed.date()}", "", "", "", gr.update(choices=self.get_flare_list()), gr.update(visible=False)
+            return fig, f"Added flare: {start_date_parsed.date()} to {end_date_parsed.date()}", "", "", [], "", gr.update(choices=self.get_flare_list()), gr.update(visible=False)
             
         except Exception as e:
-            return None, f"Failed to add flare: {str(e)}", start_date, end_date, reason, gr.update(choices=self.get_flare_list()), gr.update(visible=False)
+            return None, f"Failed to add flare: {str(e)}", start_date, end_date, categories, reason, gr.update(choices=self.get_flare_list()), gr.update(visible=False)
     
     def edit_flare(self, flare_selection):
         """Load selected flare for editing"""
         if not flare_selection or not self.ranges:
-            return "", "", "", "Please select a flare to edit", gr.update(visible=False)
+            return "", "", [], "", "Please select a flare to edit", gr.update(visible=False)
         
         try:
             # Parse the selection to get the index
             flare_list = self.get_flare_list()
             if flare_selection not in flare_list:
-                return "", "", "", "Selected flare not found", gr.update(visible=False)
+                return "", "", [], "", "Selected flare not found", gr.update(visible=False)
             
             flare_index = flare_list.index(flare_selection)
             self.editing_flare_index = flare_index
             
-            # Get flare details
-            start_date, end_date, reason = self.ranges[flare_index]
+            # Get flare details (handle both old and new format)
+            flare_data = self.ranges[flare_index]
+            if len(flare_data) == 3:  # Old format: (start, end, reason)
+                start_date, end_date, reason = flare_data
+                categories = []
+            else:  # New format: (start, end, categories, reason)
+                start_date, end_date, categories, reason = flare_data
+            
+            # Convert internal categories to readable labels
+            internal_to_label = {
+                'ambulatory_visit': 'Ambulatory Visit',
+                'lab_test': 'Lab Test',
+                'prescription': 'Prescription',
+                'physician_claim': 'Physician Claim',
+                'hospital_admission': 'Hospital Admission',
+                'imaging': 'Imaging'
+            }
+            readable_categories = [internal_to_label.get(cat, cat.replace('_', ' ').title()) for cat in categories]
+            
             start_date_str = pd.to_datetime(start_date).strftime('%Y-%m-%d')
             end_date_str = pd.to_datetime(end_date).strftime('%Y-%m-%d')
             
-            return start_date_str, end_date_str, reason, f"Editing flare: {start_date_str} to {end_date_str}", gr.update(visible=True)
+            return start_date_str, end_date_str, readable_categories, reason, f"Editing flare: {start_date_str} to {end_date_str}", gr.update(visible=True)
             
         except Exception as e:
-            return "", "", "", f"Failed to load flare for editing: {str(e)}", gr.update(visible=False)
+            return "", "", [], "", f"Failed to load flare for editing: {str(e)}", gr.update(visible=False)
     
-    def update_flare(self, start_date, end_date, reason):
+    def update_flare(self, start_date, end_date, categories, reason):
         """Update the currently editing flare"""
         if self.editing_flare_index is None:
-            return None, "No flare selected for editing", start_date, end_date, reason, gr.update(choices=self.get_flare_list()), gr.update(visible=False)
+            return None, "No flare selected for editing", start_date, end_date, categories, reason, gr.update(choices=self.get_flare_list()), gr.update(visible=False)
         
         if self.current_patient_data is None:
-            return None, "Please load a patient timeline first", start_date, end_date, reason, gr.update(choices=self.get_flare_list()), gr.update(visible=False)
+            return None, "Please load a patient timeline first", start_date, end_date, categories, reason, gr.update(choices=self.get_flare_list()), gr.update(visible=False)
         
         if not start_date or not end_date:
-            return None, "Please enter both start and end dates", start_date, end_date, reason, gr.update(choices=self.get_flare_list()), gr.update(visible=True)
+            return None, "Please enter both start and end dates", start_date, end_date, categories, reason, gr.update(choices=self.get_flare_list()), gr.update(visible=True)
+        
+        if not categories:
+            return None, "Please select at least one category", start_date, end_date, categories, reason, gr.update(choices=self.get_flare_list()), gr.update(visible=True)
         
         try:
             start_date_parsed = pd.to_datetime(start_date)
             end_date_parsed = pd.to_datetime(end_date)
-            reason = reason or "No reason provided"
+            reason = reason or ""  # Reason is now optional
             
             if end_date_parsed < start_date_parsed:
-                return None, "End date must be after start date", start_date, end_date, reason, gr.update(choices=self.get_flare_list()), gr.update(visible=True)
+                return None, "End date must be after start date", start_date, end_date, categories, reason, gr.update(choices=self.get_flare_list()), gr.update(visible=True)
+            
+            # Convert readable labels back to internal format
+            label_to_internal = {
+                'Ambulatory Visit': 'ambulatory_visit',
+                'Lab Test': 'lab_test',
+                'Prescription': 'prescription',
+                'Physician Claim': 'physician_claim',
+                'Hospital Admission': 'hospital_admission',
+                'Imaging': 'imaging'
+            }
+            internal_categories = [label_to_internal.get(cat, cat.lower().replace(' ', '_')) for cat in categories]
             
             # Update the flare
-            old_flare = self.ranges[self.editing_flare_index]
-            self.ranges[self.editing_flare_index] = (start_date_parsed, end_date_parsed, reason)
+            self.ranges[self.editing_flare_index] = (start_date_parsed, end_date_parsed, internal_categories, reason)
             
             # Reset editing state
             self.editing_flare_index = None
@@ -511,15 +619,15 @@ class PatientTimelineApp:
             # Recreate chart with updated flare
             fig = self.create_timeline()
             
-            return fig, f"Updated flare: {start_date_parsed.date()} to {end_date_parsed.date()}", "", "", "", gr.update(choices=self.get_flare_list()), gr.update(visible=False)
+            return fig, f"Updated flare: {start_date_parsed.date()} to {end_date_parsed.date()}", "", "", [], "", gr.update(choices=self.get_flare_list()), gr.update(visible=False)
             
         except Exception as e:
-            return None, f"Failed to update flare: {str(e)}", start_date, end_date, reason, gr.update(choices=self.get_flare_list()), gr.update(visible=True)
+            return None, f"Failed to update flare: {str(e)}", start_date, end_date, categories, reason, gr.update(choices=self.get_flare_list()), gr.update(visible=True)
     
     def cancel_edit_flare(self):
         """Cancel editing the current flare"""
         self.editing_flare_index = None
-        return "", "", "", "Edit cancelled", gr.update(visible=False)
+        return "", "", [], "", "Edit cancelled", gr.update(visible=False)
     
     def delete_flare(self, flare_selection):
         """Delete selected flare"""
@@ -555,14 +663,21 @@ class PatientTimelineApp:
             return "No patient selected"
         
         try:
-            flares_to_save = [
-                {
+            flares_to_save = []
+            for flare_data in self.ranges:
+                # Handle both old and new format
+                if len(flare_data) == 3:  # Old format: (start, end, reason)
+                    start_date, end_date, reason = flare_data
+                    categories = []
+                else:  # New format: (start, end, categories, reason)
+                    start_date, end_date, categories, reason = flare_data
+                
+                flares_to_save.append({
                     "start_date": str(start_date),
                     "end_date": str(end_date),
+                    "categories": categories,
                     "reason": reason
-                }
-                for start_date, end_date, reason in self.ranges
-            ]
+                })
             
             save_file = f'patient_{self.current_patient_id}_flares.json'
             with open(save_file, 'w') as f:
@@ -575,13 +690,54 @@ class PatientTimelineApp:
     
     def get_flare_list(self):
         """Get list of flares for dropdown"""
-        return [f"{pd.to_datetime(start_date).date()} to {pd.to_datetime(end_date).date()}: {reason}" 
-                for start_date, end_date, reason in self.ranges]
+        flare_list = []
+        label_mapping = {
+            'ambulatory_visit': 'Ambulatory Visit',
+            'lab_test': 'Lab Test',
+            'prescription': 'Prescription',
+            'physician_claim': 'Physician Claim',
+            'hospital_admission': 'Hospital Admission',
+            'imaging': 'Imaging'
+        }
+        
+        for flare_data in self.ranges:
+            # Handle both old and new format
+            if len(flare_data) == 3:  # Old format: (start, end, reason)
+                start_date, end_date, reason = flare_data
+                categories = []
+            else:  # New format: (start, end, categories, reason)
+                start_date, end_date, categories, reason = flare_data
+            
+            start_str = pd.to_datetime(start_date).date()
+            end_str = pd.to_datetime(end_date).date()
+            
+            # Create display string
+            display_parts = [f"{start_str} to {end_str}"]
+            
+            if categories:
+                readable_categories = [label_mapping.get(cat, cat.replace('_', ' ').title()) for cat in categories]
+                display_parts.append(f"({', '.join(readable_categories)})")
+            
+            if reason:
+                display_parts.append(f": {reason}")
+            
+            flare_list.append(" ".join(display_parts))
+        
+        return flare_list
     
     def get_chart_info(self):
         """Get chart information text"""
         if self.current_patient_data is None:
             return "No patient data loaded"
+        
+        label_mapping = {
+            'ambulatory_visit': 'Ambulatory Visit',
+            'lab_test': 'Lab Test',
+            'prescription': 'Prescription',
+            'physician_claim': 'Physician Claim',
+            'hospital_admission': 'Hospital Admission',
+            'imaging': 'Imaging'
+        }
         
         info = f"Patient ID: {self.current_patient_id}\n"
         info += f"Total Events: {len(self.current_patient_data)}\n"
@@ -591,11 +747,28 @@ class PatientTimelineApp:
         info += "Event Types:\n"
         event_counts = self.current_patient_data['event_type'].value_counts()
         for event_type, count in event_counts.items():
-            info += f"  {event_type}: {count}\n"
+            readable_name = label_mapping.get(event_type, event_type.replace('_', ' ').title())
+            info += f"  {readable_name}: {count}\n"
         
         info += f"\nFlare Periods: {len(self.ranges)}\n"
-        for i, (start_date, end_date, reason) in enumerate(self.ranges):
-            info += f"  {i+1}. {pd.to_datetime(start_date).date()} to {pd.to_datetime(end_date).date()}: {reason}\n"
+        for i, flare_data in enumerate(self.ranges):
+            # Handle both old and new format
+            if len(flare_data) == 3:  # Old format: (start, end, reason)
+                start_date, end_date, reason = flare_data
+                categories = []
+            else:  # New format: (start, end, categories, reason)
+                start_date, end_date, categories, reason = flare_data
+            
+            info += f"  {i+1}. {pd.to_datetime(start_date).date()} to {pd.to_datetime(end_date).date()}"
+            
+            if categories:
+                readable_categories = [label_mapping.get(cat, cat.replace('_', ' ').title()) for cat in categories]
+                info += f" ({', '.join(readable_categories)})"
+            
+            if reason:
+                info += f": {reason}"
+            
+            info += "\n"
         
         return info
     
@@ -716,7 +889,24 @@ def create_interface():
                         gr.Markdown("**Add/Edit Flare Period**")
                         start_date_input = gr.Textbox(label="Start Date (YYYY-MM-DD)", placeholder="YYYY-MM-DD")
                         end_date_input = gr.Textbox(label="End Date (YYYY-MM-DD)", placeholder="YYYY-MM-DD")
-                        reason_input = gr.Textbox(label="Reason", placeholder="Enter reason for flare")
+                        
+                        # Category multi-select dropdown
+                        category_dropdown = gr.Dropdown(
+                            label="Category (Required - May Select Multiple)",
+                            choices=[
+                                "Ambulatory Visit",
+                                "Lab Test", 
+                                "Prescription",
+                                "Physician Claim",
+                                "Hospital Admission",
+                                "Imaging"
+                            ],
+                            value=[],
+                            multiselect=True,
+                            interactive=True
+                        )
+                        
+                        reason_input = gr.Textbox(label="Reason (Optional)", placeholder="Enter reason for flare")
                         
                         with gr.Row():
                             add_flare_btn = gr.Button("Add Flare", variant="secondary")
@@ -866,20 +1056,20 @@ def create_interface():
         load_timeline_btn.click(
             app.load_patient_timeline,
             inputs=[patient_dropdown, ibd_filter],
-            outputs=[timeline_plot, chart_status, chart_info, flare_dropdown, start_date_input, end_date_input, reason_input, edit_group]
+            outputs=[timeline_plot, chart_status, chart_info, flare_dropdown, start_date_input, end_date_input, category_dropdown, reason_input, edit_group]
         )
         
         # IBD filter change handler
         ibd_filter.change(
             app.load_patient_timeline,
             inputs=[patient_dropdown, ibd_filter],
-            outputs=[timeline_plot, chart_status, chart_info, flare_dropdown, start_date_input, end_date_input, reason_input, edit_group]
+            outputs=[timeline_plot, chart_status, chart_info, flare_dropdown, start_date_input, end_date_input, category_dropdown, reason_input, edit_group]
         )
         
         add_flare_btn.click(
             app.add_flare,
-            inputs=[start_date_input, end_date_input, reason_input],
-            outputs=[timeline_plot, chart_status, start_date_input, end_date_input, reason_input, flare_dropdown, edit_group]
+            inputs=[start_date_input, end_date_input, category_dropdown, reason_input],
+            outputs=[timeline_plot, chart_status, start_date_input, end_date_input, category_dropdown, reason_input, flare_dropdown, edit_group]
         ).then(
             lambda: app.get_chart_info(),
             outputs=[chart_info]
@@ -888,13 +1078,13 @@ def create_interface():
         edit_flare_btn.click(
             app.edit_flare,
             inputs=[flare_dropdown],
-            outputs=[start_date_input, end_date_input, reason_input, chart_status, edit_group]
+            outputs=[start_date_input, end_date_input, category_dropdown, reason_input, chart_status, edit_group]
         )
         
         update_flare_btn.click(
             app.update_flare,
-            inputs=[start_date_input, end_date_input, reason_input],
-            outputs=[timeline_plot, chart_status, start_date_input, end_date_input, reason_input, flare_dropdown, edit_group]
+            inputs=[start_date_input, end_date_input, category_dropdown, reason_input],
+            outputs=[timeline_plot, chart_status, start_date_input, end_date_input, category_dropdown, reason_input, flare_dropdown, edit_group]
         ).then(
             lambda: app.get_chart_info(),
             outputs=[chart_info]
@@ -902,7 +1092,7 @@ def create_interface():
         
         cancel_edit_btn.click(
             app.cancel_edit_flare,
-            outputs=[start_date_input, end_date_input, reason_input, chart_status, edit_group]
+            outputs=[start_date_input, end_date_input, category_dropdown, reason_input, chart_status, edit_group]
         )
         
         delete_flare_btn.click(
