@@ -1,231 +1,894 @@
-# Patient Timeline Viewer (Web Application)
+# 🏥 Patient Timeline Viewer
 
-Part of the [`ibd-data-timeline-app`](https://github.com/phairlab/ibd-data-labelling-app) ecosystem
+> **A comprehensive medical timeline visualization and flare management tool for IBD (Inflammatory Bowel Disease) research**
 
-An advanced web-based application for visualizing longitudinal patient event data with interactive timeline visualization, IBD flare annotation, and multi-user access control. Designed for researchers and clinicians working with complex medical datasets.
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![Gradio](https://img.shields.io/badge/interface-gradio-orange.svg)](https://gradio.app/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## 🌟 Key Features
+## 📋 Table of Contents
 
-### 📊 **Advanced Timeline Visualization**
-- Interactive Plotly-based timelines with zoom, pan, and hover capabilities
-- Color-coded event types with smart hover tooltips
-- Intelligent handling of same-day events (especially lab tests)
-- Real-time chart updates and filtering
+- [🎯 Overview](#-overview)
+- [✨ Features](#-features)
+- [📦 Installation](#-installation)
+- [🚀 Quick Start](#-quick-start)
+- [🔧 Usage](#-usage)
+- [📊 Data Format](#-data-format)
+- [🏗️ Architecture](#-architecture)
+- [🎨 User Interface](#-user-interface)
+- [🔐 Access Control](#-access-control)
+- [📁 File Structure](#-file-structure)
+- [🛠️ Development](#-development)
+- [🐛 Troubleshooting](#-troubleshooting)
+- [📖 API Reference](#-api-reference)
+- [🤝 Contributing](#-contributing)
+- [📄 License](#-license)
 
-### 🎯 **IBD Event Filtering**
-- **All Events**: View complete medical history
-- **IBD Related Only**: Focus on IBD-specific events
-- **Non-IBD Related Only**: View non-IBD medical events
-- Real-time filtering without page reloads
+## 🎯 Overview
 
-### 🔥 **Flare Period Management**
-- Add, edit, and delete IBD flare periods with visual annotations
-- Red shaded regions and triangular markers for flare visualization
-- Persistent storage with automatic save/load functionality
-- Detailed flare reasoning and date tracking
+The **Patient Timeline Viewer** is a sophisticated web application designed specifically for medical researchers and clinicians working with IBD patients. It provides powerful visualization tools for exploring patient medical events over time and enables efficient labeling of disease flare periods.
 
-### 👥 **Multi-User Access Control**
-- Command-line based patient group access
-- Secure patient data segregation
-- Role-based access (researcher, clinician, admin)
-- Custom patient cohort definitions
+### What This Tool Does
 
-### 🔄 **Intelligent Data Processing**
-- Automatic CSV file loading from specified directories
-- Smart text wrapping for long medical descriptions
-- Multiple lab test separation for same-day events
-- Robust error handling and fallback systems
+- **📈 Visualizes Patient Timelines**: Interactive charts showing medical events chronologically
+- **🔍 Filters Medical Data**: Separate IBD-related from general medical events
+- **📝 Labels Disease Flares**: Month-by-month annotation of disease activity
+- **👥 Manages Access Control**: Team-based patient data access
+- **📊 Exports Data**: Save timelines and labels for further analysis
 
-## 🚀 Quick Start
+### Who Should Use This
 
-### 1. Clone the Repository
+- **🔬 Medical Researchers** studying IBD patterns
+- **👨‍⚕️ Clinicians** reviewing patient histories
+- **📊 Data Analysts** working with medical timelines
+- **🎓 Students** learning medical data visualization
+
+## ✨ Features
+
+### 🎨 Interactive Timeline Visualization
+- **Gantt-style charts** showing events over time
+- **Hover tooltips** with detailed event information
+- **Zoom and pan** capabilities for detailed exploration
+- **Color-coded events** by medical category
+- **Smart lab test spacing** for same-day multiple tests
+
+### 🏷️ Advanced Flare Labeling
+- **Monthly labeling system** for disease activity
+- **Category-based evidence** linking flares to event types
+- **Reason documentation** for clinical notes
+- **Visual flare indicators** on timelines
+- **Persistent storage** of all labels
+
+### 🔐 Team-Based Access Control
+- **Patient group isolation** for research teams
+- **Command-line access control** for different user roles
+- **Custom patient ranges** for specific studies
+- **Admin access** for supervisors
+
+### 📊 Data Management
+- **Automatic data loading** from CSV files
+- **Real-time filtering** by IBD relevance
+- **Export capabilities** to CSV/Excel
+- **Cross-tab synchronization** between views
+
+### 🎯 User-Friendly Interface
+- **Three-tab layout**: Overview, Timeline, Labeling
+- **Clean, medical-grade design** with professional styling
+- **Responsive layout** for different screen sizes
+- **Comprehensive help documentation**
+
+## 📦 Installation
+
+### Prerequisites
+
+Make sure you have Python 3.8 or higher installed:
+
 ```bash
-git clone https://github.com/phairlab/ibd-data-labelling-app.git
-cd ibd-data-labelling-webapp
+python --version
+# Should show: Python 3.8.x or higher
 ```
 
-### 2. Install Dependencies
+### Step 1: Download the Application
+
 ```bash
+# Create a new directory for the project
+mkdir patient-timeline-viewer
+cd patient-timeline-viewer
+
+# Download all four files (main.py, patient_timeline_webapp.py, monthly_labelling.py, timeline_visualization.py)
+# Place them in the patient-timeline-viewer directory
+```
+
+### Step 2: Install Dependencies
+
+```bash
+# Install required Python packages
+pip install gradio pandas plotly numpy openpyxl
+
+# Or install from requirements.txt (if provided)
 pip install -r requirements.txt
 ```
 
-**Required packages:**
-- `gradio` - Web interface framework
-- `plotly` - Interactive plotting
-- `pandas` - Data manipulation
-- `numpy` - Numerical operations
-- `argparse` - Command-line argument parsing
+### Step 3: Verify Installation
 
-### 3. Prepare Your Data
-Ensure your CSV files are located in:
-```
-/data/external_ps/baumgart/BAUMGART_SHARED/Baumgart_IBD/Sacha/ibd_activity_viewer/data
+```bash
+# Test the installation with sample data
+python main.py dev --patients 5
 ```
 
-Files should contain "events" in the filename (e.g., `patient_events_2024.csv`)
+If successful, you should see:
+```
+Running on local URL:  http://127.0.0.1:7860
+```
 
-### 4. Launch with Access Control
+## 🚀 Quick Start
 
-#### **Research Teams (Predefined Groups)**
+### 1. **Launch with Sample Data** (Recommended for first-time users)
+
+```bash
+python main.py dev --patients 10
+```
+
+This creates 10 sample patients with realistic medical data for testing.
+
+### 2. **Open Your Web Browser**
+
+Navigate to: `http://127.0.0.1:7860`
+
+### 3. **Explore the Interface**
+
+1. **Data Overview Tab**: Check data loading status
+2. **Timeline Viewer Tab**: Select a patient and view their timeline
+3. **Labelling Mode Tab**: Practice labeling disease flares
+
+### 4. **Try Key Features**
+
+- **Select a patient** from the dropdown
+- **Filter events** using IBD/Non-IBD options
+- **Hover over events** to see detailed information
+- **Create a monthly label** in the Labelling Mode tab
+
+## 🔧 Usage
+
+### Command Line Options
+
+The application supports multiple access modes through command-line arguments:
+
+#### Development Mode
+```bash
+# Start with sample data (great for testing)
+python main.py dev --patients 20
+```
+
+#### Research Team Access
 ```bash
 # Group A: Patients 1-100
-python webapp.py group-a
+python main.py group-a
 
 # Group B: Patients 101-200
-python webapp.py group-b
+python main.py group-b
 
 # Group C: Patients 201-300
-python webapp.py group-c
+python main.py group-c
 ```
 
-#### **Custom Patient Cohorts**
+#### Custom Patient Range
 ```bash
-# Custom range with naming
-python webapp.py custom --start 50 --end 150 --name "Pediatric Cohort"
-
-# Simple custom range
-python webapp.py custom --start 1 --end 25
+# Define your own patient range
+python main.py custom --start 50 --end 150 --name "Pediatric Study"
 ```
 
-#### **Special Access Modes**
+#### Administrator Access
 ```bash
-# Administrator access (all patients)
-python webapp.py admin
-
-# Development mode (sample data)
-python webapp.py dev --patients 100
+# Access all patients (requires admin privileges)
+python main.py admin
 ```
 
-The application will launch in your default browser with access restricted to your specified patient group.
+### Working with Real Data
 
-## 📋 Data Format Requirements
+#### 1. **Data Directory Setup**
 
-### **Required Columns**
-| Column | Type | Description |
-|--------|------|-------------|
-| `patient_id` | Integer | Unique patient identifier |
-| `start_date` | Date | Event start date (YYYY-MM-DD) |
-| `end_date` | Date | Event end date (YYYY-MM-DD) |
-| `event_type` | String | Type of medical event |
-| `ibd_related` | Boolean | Whether event is IBD-related (True/False) |
+The application looks for data in:
+```
+/data/external_ps/baumgart/BAUMGART_SHARED/Baumgart_IBD/Sacha/ibd_activity_viewer/data/
+```
 
-### **Optional Columns**
-| Column | Type | Description |
-|--------|------|-------------|
-| `event_info` | JSON String | Additional event details (age, sex, notes) |
-| `source_dataset` | String | Data source identifier (CLAIMS, LAB, DAD, etc.) |
+#### 2. **Expected File**
 
-### **Example Data Structure**
+- **Filename**: `selected_events_mia_patients.csv`
+- **Format**: CSV with specific column structure (see Data Format section)
+
+#### 3. **Loading Real Data**
+
+```bash
+# Launch with your assigned patient group
+python main.py group-a  # or group-b, group-c, etc.
+```
+
+## 📊 Data Format
+
+### Required CSV Structure
+
+Your data file must contain these columns:
+
+| Column | Type | Description | Example |
+|--------|------|-------------|---------|
+| `patient_id` | Integer | Unique patient identifier | `12345` |
+| `start_date` | Date | Event start date | `2023-01-15` |
+| `end_date` | Date | Event end date | `2023-01-15` |
+| `event_type` | String | Type of medical event | `ambulatory_visit` |
+| `ibd_related` | Boolean | Whether event is IBD-related | `True` |
+
+### Optional Columns
+
+| Column | Type | Description | Example |
+|--------|------|-------------|---------|
+| `event_info` | JSON String | Additional event details | `{"Patient Age": 45, "Diagnosis": "Crohn's"}` |
+| `source_dataset` | String | Data source identifier | `CLAIMS` |
+
+### Supported Event Types
+
+The application recognizes these medical event categories:
+
+- **`ambulatory_visit`** → Ambulatory Visit
+- **`lab_test`** → Lab Test
+- **`prescription`** → Prescription
+- **`physician_claim`** → Physician Claim
+- **`hospital_admission`** → Hospital Admission
+- **`imaging`** → Imaging
+- **`hospitalization`** → Hospitalization
+- **`medication_change`** → Medication Change
+
+### Example Data Row
+
 ```csv
 patient_id,start_date,end_date,event_type,ibd_related,event_info,source_dataset
-101,2024-01-15,2024-01-15,lab_test,True,"{""test_type"":""CBC"",""result"":""normal""}",LAB
-101,2024-01-20,2024-01-22,hospitalization,True,"{""admission_reason"":""IBD flare""}",DAD
+12345,2023-01-15,2023-01-15,ambulatory_visit,True,"{""Patient Age"": 45, ""Diagnosis"": ""Crohn's Disease""}",CLAIMS
 ```
 
-## 🎛️ User Interface Guide
+## 🏗️ Architecture
 
-### **Timeline Viewer Tab**
-1. **Patient Selection**: Choose from your accessible patient cohort
-2. **IBD Filter**: Select event types to display
-3. **Interactive Timeline**: 
-   - Hover for detailed event information
-   - Zoom and pan for timeline navigation
-   - Color-coded event types
+### System Overview
 
-### **Flare Management Panel**
-1. **Add Flares**: Enter date range and reason
-2. **Edit Existing**: Select and modify flare periods  
-3. **Visual Feedback**: Red overlays show flare periods
-4. **Persistent Storage**: Auto-save/load per patient
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Web Browser   │◄──►│   Gradio UI     │◄──►│  Application    │
+│                 │    │                 │    │     Logic       │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+                                                        │
+                                                        ▼
+                                               ┌─────────────────┐
+                                               │   Data Storage  │
+                                               │   (CSV/JSON)    │
+                                               └─────────────────┘
+```
 
-### **Data Overview Tab**
-- View current access permissions
-- Export filtered datasets
-- Reload data from directory
+### Component Architecture
 
-## 🔧 Advanced Features
+```
+main.py
+├── UI Interface & Event Handling
+├── Command Line Argument Processing
+└── Application Orchestration
 
-### **Smart Lab Test Handling**
-Multiple lab tests on the same day are automatically separated with 2-hour offsets for individual visualization while maintaining chronological accuracy.
+patient_timeline_webapp.py
+├── Core Application Logic
+├── Data Loading & Management
+├── Patient Filtering
+└── Timeline Coordination
 
-### **Intelligent Text Wrapping**
-Long medical descriptions are automatically wrapped in hover tooltips for better readability without horizontal scrolling.
+monthly_labelling.py
+├── Flare Label Management
+├── JSON Persistence
+├── Label Validation
+└── Edit Operations
 
-### **Real-Time Updates**
-All filtering, flare management, and chart interactions update immediately without page reloads.
+timeline_visualization.py
+├── Plotly Chart Creation
+├── Visual Styling
+├── Hover Data Processing
+└── Interactive Features
+```
 
-### **Color-Coded Visualization**
-- Different event types have distinct colors
-- Hover tooltips match event bar colors
-- Flare periods use consistent red highlighting
+## 🎨 User Interface
 
-## 🛡️ Security & Access Control
+### Tab 1: Data Overview 📊
 
-### **Patient Data Protection**
-- Command-line access control prevents unauthorized patient access
-- Data filtering at application level
-- Secure patient ID range enforcement
+**Purpose**: Monitor data loading status and export capabilities
 
+**Features**:
+- **Data Status Display**: Shows loaded patient count and date ranges
+- **Reload Functionality**: Refresh data from source files
+- **Export Options**: Save data to CSV or Excel formats
+- **Patient Range Information**: Current access permissions
 
-## 📈 Use Cases
+**When to Use**:
+- ✅ First time loading the application
+- ✅ Troubleshooting data loading issues
+- ✅ Exporting data for external analysis
+- ✅ Verifying patient access permissions
 
-### **Clinical Research**
-- Longitudinal patient history visualization
-- IBD flare period identification and annotation
-- Multi-source medical data integration
-- Cohort-specific analysis
+### Tab 2: Timeline Viewer 📈
 
-### **Clinical Practice**
-- Patient timeline review
-- Flare pattern identification
-- Treatment timeline visualization
-- Multi-disciplinary team collaboration
+**Purpose**: Interactive visualization of patient medical timelines
 
-### **Data Analysis**
-- Dataset preparation and cleaning
-- Temporal pattern identification
-- Export prepared datasets for statistical analysis
+**Layout**:
+```
+┌─────────────────┬─────────────────────────────────────────┐
+│  Patient        │  Timeline Chart                         │
+│  Selection      │  ┌─────────────────────────────────────┐ │
+│  ┌───────────┐  │  │        Interactive Timeline         │ │
+│  │Patient ID │  │  │                                     │ │
+│  └───────────┘  │  │  [IBD Filter] [Refresh Chart]       │ │
+│  [Load Button]  │  └─────────────────────────────────────┘ │
+└─────────────────┴─────────────────────────────────────────┘
+```
 
-## 🔍 Troubleshooting
+**Controls**:
+- **Patient Dropdown**: Select specific patient
+- **IBD Filter**: Show All/IBD Only/Non-IBD events
+- **Load Timeline**: Generate visualization
+- **Refresh Chart**: Update with latest data
 
-### **Common Issues**
+**Chart Features**:
+- **Gantt-style bars** for each medical event
+- **Color coding** by event type
+- **Hover tooltips** with detailed information
+- **Zoom and pan** for detailed exploration
+- **Flare indicators** (red rectangles for monthly flares)
 
-**No patients visible:**
-- Verify your access command includes patients in the data range
-- Check data directory contains properly formatted CSV files
+### Tab 3: Labelling Mode 🏷️
 
-**Events not showing:**
-- Check IBD filter setting matches desired event types
-- Verify `ibd_related` column contains proper boolean values
+**Purpose**: Efficient monthly flare labeling with timeline context
 
-**Flares not saving:**
-- Ensure dates are in YYYY-MM-DD format
-- Verify end date is after start date
+**Layout**:
+```
+┌─────────────────┬─────────────────────────────────────────┐
+│  Controls       │  Monthly Timeline                       │
+│  ┌───────────┐  │  ┌─────────────────────────────────────┐ │
+│  │Patient ID │  │  │  [◀ Prev] [Next ▶]                  │ │
+│  └───────────┘  │  │                                     │ │
+│                 │  │      Monthly View Timeline          │ │
+│  ┌───────────┐  │  │                                     │ │
+│  │Month      │  │  │                                     │ │
+│  │Selection  │  │  │                                     │ │
+│  └───────────┘  │  └─────────────────────────────────────┘ │
+│                 │                                         │
+│  Flare Labels   │                                         │
+│  ┌───────────┐  │                                         │
+│  │Evidence?  │  │                                         │
+│  │Categories │  │                                         │
+│  │Reason     │  │                                         │
+│  └───────────┘  │                                         │
+└─────────────────┴─────────────────────────────────────────┘
+```
 
-**Performance issues:**
-- Large datasets may require filtering to specific patient ranges
-- Use development mode for testing with sample data
+**Workflow**:
+1. **Load Patient**: Select patient for labeling
+2. **Choose Month**: Navigate to specific month
+3. **View Timeline**: See events for that month
+4. **Label Flare**: Mark evidence and categories
+5. **Save Label**: Store annotation permanently
 
+**Controls**:
+- **Month Navigation**: Previous/Next buttons + dropdown
+- **Evidence Radio**: Yes/No flare evidence
+- **Category Selection**: Multi-select relevant event types
+- **Reason Field**: Optional text documentation
+- **Save/Clear**: Label management buttons
+
+## 🔐 Access Control
+
+### Team-Based Patient Access
+
+The application implements strict access control to ensure research teams only see their assigned patients:
+
+#### Group A (Patients 1-100)
+```bash
+python main.py group-a
+# Access: Patients 1-100
+# Team: Early diagnosis research
+```
+
+#### Group B (Patients 101-200)
+```bash
+python main.py group-b
+# Access: Patients 101-200
+# Team: Treatment response analysis
+```
+
+#### Group C (Patients 201-300)
+```bash
+python main.py group-c
+# Access: Patients 201-300
+# Team: Long-term outcomes study
+```
+
+### Custom Access Ranges
+
+For specific studies or sub-analyses:
+
+```bash
+python main.py custom --start 50 --end 150 --name "Pediatric Cohort"
+# Access: Patients 50-150
+# Custom name appears in UI
+```
+
+### Administrator Access
+
+For supervisors and data managers:
+
+```bash
+python main.py admin
+# Access: All patients
+# Full dataset visibility
+```
+
+### Security Features
+
+- **Command-line enforcement**: Access defined at startup
+- **UI restrictions**: Only assigned patients appear in dropdowns
+- **Data filtering**: Automatic patient range application
+- **Audit logging**: Access patterns recorded in console
+
+## 📁 File Structure
+
+```
+patient-timeline-viewer/
+├── main.py                     # 🎯 Application entry point & UI
+├── patient_timeline_webapp.py     # 🏥 Core application logic
+├── monthly_labelling.py        # 🏷️ Flare labeling functionality
+├── timeline_visualization.py   # 📊 Chart creation & visualization
+├── README.md                   # 📖 This documentation
+├── requirements.txt            # 📦 Python dependencies
+└── data/                       # 📁 Data directory (optional)
+    ├── patient_123_flares.json           # Original flare data
+    ├── patient_123_monthly_labels.json   # Monthly labels
+    └── selected_events_mia_patients.csv  # Main patient data
+```
+
+### File Responsibilities
+
+#### `main.py` (Entry Point)
+```python
+# What it does:
+- Command-line argument processing
+- Gradio interface creation
+- Event handler setup
+- Application launch coordination
+
+# Key functions:
+- parse_arguments()        # Process command line options
+- create_app_with_args()   # Initialize with user permissions
+- create_interface()       # Build Gradio UI
+```
+
+#### `patient_timeline_webapp.py` (Core Logic)
+```python
+# What it does:
+- Data loading and management
+- Patient filtering and selection
+- Timeline coordination
+- Export functionality
+
+# Key class: PatientTimelineApp
+- auto_load_data()         # Load CSV data automatically
+- load_patient_timeline()  # Generate patient timeline
+- apply_patient_filter()   # Enforce access control
+- export_data()            # Save data to files
+```
+
+#### `monthly_labelling.py` (Flare Management)
+```python
+# What it does:
+- Monthly flare label storage
+- JSON file persistence
+- Label validation and editing
+- Category management
+
+# Key functions:
+- save_monthly_label()     # Store flare annotation
+- load_monthly_labels()    # Retrieve saved labels
+- delete_monthly_label()   # Remove annotations
+- get_monthly_labels_info() # Format for display
+```
+
+#### `timeline_visualization.py` (Charts)
+```python
+# What it does:
+- Plotly chart creation
+- Visual styling and theming
+- Hover data processing
+- Interactive features
+
+# Key functions:
+- create_main_timeline()   # Full patient timeline
+- create_monthly_timeline() # Single month view
+- add_flares_to_chart()    # Flare visualization
+- process_lab_test_data()  # Handle multiple same-day tests
+```
+
+## 🛠️ Development
+
+### Setting Up Development Environment
+
+```bash
+# 1. Clone/download the project
+git clone <repository-url>
+cd patient-timeline-viewer
+
+# 2. Create virtual environment (recommended)
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# 3. Install dependencies
+pip install -r requirements.txt
+
+# 4. Run in development mode
+python main.py dev --patients 50
+```
+
+### Code Organization Principles
+
+#### 1. **Separation of Concerns**
+- **UI logic** isolated in `main.py`
+- **Business logic** in `patient_timeline_webapp.py`
+- **Specialized features** in dedicated modules
+
+#### 2. **Functional Programming**
+- **Pure functions** where possible
+- **Minimal side effects**
+- **Clear input/output contracts**
+
+#### 3. **Error Handling**
+- **Graceful degradation** for missing data
+- **User-friendly error messages**
+- **Comprehensive logging**
+
+### Making Changes
+
+#### Adding New Event Types
+1. Update `get_label_mapping()` in `timeline_visualization.py`
+2. Add to category choices in `main.py`
+3. Update documentation
+
+#### Modifying Chart Appearance
+1. Edit styling in `timeline_visualization.py`
+2. Update CSS in `main.py` for UI elements
+3. Test with different data sizes
+
+#### Adding New Access Groups
+1. Extend `parse_arguments()` in `main.py`
+2. Add new command option
+3. Update help documentation
+
+### Testing
+
+#### Manual Testing Checklist
+
+- [ ] **Data Loading**: CSV files load correctly
+- [ ] **Patient Selection**: Dropdown populates properly
+- [ ] **Timeline Generation**: Charts render without errors
+- [ ] **Flare Labeling**: Labels save and load correctly
+- [ ] **Access Control**: Patient filtering works
+- [ ] **Export Functions**: CSV/Excel export succeeds
+
+#### Common Test Scenarios
+
+```bash
+# Test with small dataset
+python main.py dev --patients 5
+
+# Test access control
+python main.py group-a
+
+# Test custom ranges
+python main.py custom --start 1 --end 10 --name "Test"
+```
+
+## 🐛 Troubleshooting
+
+### Common Issues and Solutions
+
+#### 1. **Application Won't Start**
+
+**Error**: `ModuleNotFoundError: No module named 'gradio'`
+```bash
+# Solution: Install dependencies
+pip install gradio pandas plotly numpy openpyxl
+```
+
+**Error**: `ModuleNotFoundError: No module named 'patient_timeline_webapp'`
+```bash
+# Solution: Ensure all files are in the same directory
+ls -la
+# Should show: main.py, patient_timeline_webapp.py, monthly_labelling.py, timeline_visualization.py
+```
+
+#### 2. **No Data Loading**
+
+**Problem**: "No data loaded" appears in interface
+
+**Solutions**:
+1. **Check data file location**:
+   ```bash
+   # Expected location:
+   /data/external_ps/baumgart/BAUMGART_SHARED/Baumgart_IBD/Sacha/ibd_activity_viewer/data/selected_events_mia_patients.csv
+   ```
+
+2. **Use development mode**:
+   ```bash
+   python main.py dev --patients 10
+   ```
+
+3. **Verify file format**:
+   - CSV file with proper column names
+   - Date format: YYYY-MM-DD
+   - Boolean values: True/False (not 1/0)
+
+#### 3. **Patient Access Issues**
+
+**Problem**: "No patients visible" in dropdown
+
+**Solutions**:
+1. **Check patient ID ranges**:
+   ```bash
+   # Ensure your data has patients in the expected range
+   python main.py admin  # See all patients
+   ```
+
+2. **Verify command usage**:
+   ```bash
+   # Correct usage:
+   python main.py group-a  # NOT: python main.py group-a.py
+   ```
+
+#### 4. **Chart Display Problems**
+
+**Problem**: Charts appear blank or overlapping
+
+**Solutions**:
+1. **Clear browser cache**
+2. **Refresh the page**
+3. **Try different patient**:
+   ```bash
+   # Use patients with more data
+   python main.py dev --patients 20
+   ```
+
+#### 5. **Labels Not Saving**
+
+**Problem**: Monthly labels disappear after restart
+
+**Solutions**:
+1. **Check write permissions** in application directory
+2. **Verify patient is loaded** before labeling
+3. **Check file creation**:
+   ```bash
+   ls -la patient_*_monthly_labels.json
+   ```
+
+#### 6. **Performance Issues**
+
+**Problem**: Application runs slowly
+
+**Solutions**:
+1. **Reduce patient count** in development mode
+2. **Filter data** by date range
+3. **Use smaller datasets** for testing
+
+### Debug Mode
+
+Enable detailed logging by modifying `main.py`:
+
+```python
+# Add at the top of main.py
+import logging
+logging.basicConfig(level=logging.DEBUG)
+
+# Or run with debug flag
+python main.py dev --debug
+```
+
+### Getting Help
+
+1. **Check console output** for error messages
+2. **Verify all dependencies** are installed
+3. **Test with sample data** first
+4. **Check file permissions** for data directories
+5. **Consult this README** for configuration details
+
+## 📖 API Reference
+
+### PatientTimelineApp Class
+
+#### Constructor
+```python
+PatientTimelineApp(patient_range=None, group_name="Default")
+```
+
+**Parameters**:
+- `patient_range`: Tuple of (start_id, end_id) for patient filtering
+- `group_name`: Display name for the patient group
+
+#### Core Methods
+
+##### Data Management
+```python
+def auto_load_data(self)
+```
+Automatically loads patient data from CSV files or generates sample data.
+
+```python
+def get_patient_choices(self)
+```
+Returns list of available patient IDs as strings.
+
+```python
+def export_data(self, format_choice)
+```
+Exports current data to CSV or Excel format.
+
+##### Timeline Operations
+```python
+def load_patient_timeline(self, patient_id, ibd_filter="All Events")
+```
+Loads and creates timeline visualization for specified patient.
+
+**Parameters**:
+- `patient_id`: String representation of patient ID
+- `ibd_filter`: "All Events", "IBD Related Only", or "Non-IBD Related Only"
+
+**Returns**: (figure, status_message, chart_info)
+
+##### Monthly Labeling
+```python
+def save_monthly_label(self, selected_month, evidence, categories, reason)
+```
+Saves monthly flare label to JSON file.
+
+**Parameters**:
+- `selected_month`: Month string in "Month YYYY" format
+- `evidence`: "Yes" or "No"
+- `categories`: List of event type categories
+- `reason`: Optional text description
+
+### Key Functions
+
+#### Timeline Visualization
+```python
+def create_main_timeline(app)
+```
+Creates full patient timeline with all events and flares.
+
+```python
+def create_monthly_timeline(app, selected_month, view_offset=0)
+```
+Creates focused monthly timeline view.
+
+#### Data Processing
+```python
+def process_lab_test_data(data)
+```
+Handles multiple lab tests on same day with time offsets.
+
+```python
+def create_hover_data(data)
+```
+Generates rich hover tooltips for timeline events.
+
+### Event Handlers
+
+#### UI Events
+- `load_timeline_btn.click()`: Load patient timeline
+- `save_label_btn.click()`: Save monthly flare label
+- `month_dropdown.change()`: Update monthly view
+- `ibd_filter.change()`: Filter timeline events
+
+#### Data Events
+- `reload_data_btn.click()`: Refresh data from files
+- `export_btn.click()`: Export data to file
 
 ## 🤝 Contributing
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/new-feature`)
-3. Commit changes (`git commit -am 'Add new feature'`)
-4. Push to branch (`git push origin feature/new-feature`)
-5. Create a Pull Request
+### Development Workflow
 
+1. **Fork the repository**
+2. **Create feature branch**: `git checkout -b feature/new-feature`
+3. **Make changes** following code style guidelines
+4. **Test thoroughly** with sample data
+5. **Submit pull request** with detailed description
 
-## 🙏 Acknowledgments
+### Code Style Guidelines
 
-- Built with [Gradio](https://gradio.app/) for the web interface
-- Visualization powered by [Plotly](https://plotly.com/python/)
-- Part of the IBD research toolkit ecosystem
+#### Python Standards
+- Follow **PEP 8** for code formatting
+- Use **descriptive variable names**
+- Add **docstrings** for all functions
+- Include **type hints** where applicable
 
-## 📞 Support
+#### Documentation
+- Update **README.md** for new features
+- Add **inline comments** for complex logic
+- Include **examples** for new functionality
 
-For issues, questions, or feature requests, please open an issue on GitHub or contact the development team.
+#### Testing
+- Test with **multiple patient counts**
+- Verify **access control** works correctly
+- Check **data export** functionality
+- Ensure **UI responsiveness**
+
+### Reporting Issues
+
+When reporting bugs, please include:
+
+1. **Command used** to start application
+2. **Error messages** from console
+3. **Steps to reproduce** the issue
+4. **Expected vs actual** behavior
+5. **System information** (OS, Python version)
+
+### Feature Requests
+
+For new features, please describe:
+
+1. **Use case** and motivation
+2. **Proposed solution** or approach
+3. **Alternative approaches** considered
+4. **Impact on existing** functionality
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+### MIT License Summary
+
+**You are free to**:
+- ✅ Use the software for any purpose
+- ✅ Modify and distribute the software
+- ✅ Include in commercial products
+- ✅ Grant sublicenses to others
+
+**You must**:
+- 📝 Include the original copyright notice
+- 📝 Include the license text in distributions
+
+**You cannot**:
+- ❌ Hold the authors liable for damages
+- ❌ Remove copyright notices
 
 ---
 
-**Note**: This is the web-hosted version of the IBD Timeline Viewer. For the desktop executable version, see the [standalone app implementation](https://github.com/phairlab/ibd-data-labelling-app).
+## 🎉 Quick Reference Card
+
+### Essential Commands
+```bash
+# Start with sample data
+python main.py dev --patients 10
+
+# Research team access
+python main.py group-a
+
+# Custom patient range
+python main.py custom --start 1 --end 50 --name "Study"
+
+# Admin access
+python main.py admin
+```
+
+### Key Features
+- 📊 **Interactive timelines** with medical events
+- 🏷️ **Monthly flare labeling** with categories
+- 🔐 **Team-based access control** for patient groups
+- 📁 **Data export** to CSV/Excel formats
+- 🎨 **Professional medical interface**
+
+### Support
+- 📖 **Documentation**: This README
+- 🐛 **Bug Reports**: GitHub Issues
+- 💡 **Feature Requests**: GitHub Discussions
+- 📧 **Contact**: [Your contact information]
+
+---
+
+*Built with ❤️ for IBD research communities*
