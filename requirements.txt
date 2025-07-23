@@ -1,28 +1,15 @@
-gradio==5.35
-pandas>=1.5
-plotly>=5.18
-numpy>=1.21
-openpyxl>=3.1  # Required for reading Excel (.xlsx) files
+# Patient Timeline Viewer - Requirements
+# Working as of July 2025
 
+# Web Interface
+gradio==5.35.0
 
-# Group A: Patients 1-100
-python script.py group-a
+# Data Processing
+pandas>=1.5.0
+numpy>=1.21.0
 
-# Group B: Patients 101-200  
-python script.py group-b
+# Visualization
+plotly>=5.18.0
 
-# Group C: Patients 201-300
-python script.py group-c
-
-# Custom range with custom name
-python script.py custom --start 50 --end 150 --name "Research Cohort"
-
-# Custom range with default name
-python script.py custom --start 1 --end 25
-
-# Admin access (all patients)
-python script.py admin
-
-# Development mode (sample data)
-python script.py dev
-python script.py dev --patients 100  # 100 sample patients
+# File I/O Support
+openpyxl>=3.1.0

@@ -57,7 +57,7 @@ The **Patient Timeline Viewer** is a sophisticated web application designed spec
 - **Category-based evidence** linking flares to event types
 - **Reason documentation** for clinical notes
 - **Visual flare indicators** on timelines
-- **Persistent storage** of all labels
+- **Persistent storage** of all labels in JSON format
 
 ### 🔐 Team-Based Access Control
 - **Patient group isolation** for research teams
@@ -441,10 +441,8 @@ patient-timeline-viewer/
 ├── timeline_visualization.py   # 📊 Chart creation & visualization
 ├── README.md                   # 📖 This documentation
 ├── requirements.txt            # 📦 Python dependencies
-└── data/                       # 📁 Data directory (optional)
-    ├── patient_123_flares.json           # Original flare data
-    ├── patient_123_monthly_labels.json   # Monthly labels
-    └── selected_events_mia_patients.csv  # Main patient data
+└── data/                       # 📁 Data directory, repo path: '/data/external_ps/baumgart/BAUMGART_SHARED/Baumgart_IBD/Sacha/ibd_activity_viewer'
+    └── selected_events_mia_patients.csv  # Selected 10 patients' data
 ```
 
 ### File Responsibilities
@@ -887,8 +885,5 @@ python main.py admin
 - 📖 **Documentation**: This README
 - 🐛 **Bug Reports**: GitHub Issues
 - 💡 **Feature Requests**: GitHub Discussions
-- 📧 **Contact**: [Your contact information]
 
 ---
-
-*Built with ❤️ for IBD research communities*
