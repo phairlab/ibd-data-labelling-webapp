@@ -8,76 +8,76 @@
 
 ## 📋 Table of Contents
 
-- [🎯 Overview](#-overview)
-- [✨ Features](#-features)
-- [📦 Installation](#-installation)
-- [🚀 Quick Start](#-quick-start)
-- [🔧 Usage](#-usage)
-- [📊 Data Format](#-data-format)
-- [🏗️ Architecture](#-architecture)
-- [🎨 User Interface](#-user-interface)
-- [🔐 Access Control](#-access-control)
-- [📁 File Structure](#-file-structure)
-- [🛠️ Development](#-development)
-- [🐛 Troubleshooting](#-troubleshooting)
-- [📖 API Reference](#-api-reference)
-- [🤝 Contributing](#-contributing)
-- [📄 License](#-license)
+- [Overview](#-overview)
+- [Features](#-features)
+- [Installation](#-installation)
+- [Quick Start](#-quick-start)
+- [Usage](#-usage)
+- [Data Format](#-data-format)
+- [Architecture](#-architecture)
+- [User Interface](#-user-interface)
+- [Access Control](#-access-control)
+- [File Structure](#-file-structure)
+- [Development](#-development)
+- [Troubleshooting](#-troubleshooting)
+- [API Reference](#-api-reference)
+- [Contributing](#-contributing)
+- [License](#-license)
 
-## 🎯 Overview
+## Overview
 
 The **Patient Timeline Viewer** is a sophisticated web application designed specifically for medical researchers and clinicians working with IBD patients. It provides powerful visualization tools for exploring patient medical events over time and enables efficient labeling of disease flare periods.
 
 ### What This Tool Does
 
-- **📈 Visualizes Patient Timelines**: Interactive charts showing medical events chronologically
-- **🔍 Filters Medical Data**: Separate IBD-related from general medical events
-- **📝 Labels Disease Flares**: Month-by-month annotation of disease activity
-- **👥 Manages Access Control**: Team-based patient data access
-- **📊 Exports Data**: Save timelines and labels for further analysis
+- **Visualizes Patient Timelines**: Interactive charts showing medical events chronologically
+- **Filters Medical Data**: Separate IBD-related from general medical events
+- **Labels Disease Flares**: Month-by-month annotation of disease activity
+- **Manages Access Control**: Team-based patient data access
+- **Exports Data**: Save timelines and labels for further analysis
 
 ### Who Should Use This
 
-- **🔬 Medical Researchers** studying IBD patterns
-- **👨‍⚕️ Clinicians** reviewing patient histories
-- **📊 Data Analysts** working with medical timelines
-- **🎓 Students** learning medical data visualization
+- **Medical Researchers** studying IBD patterns
+- **Clinicians** reviewing patient histories
+- **Data Analysts** working with medical timelines
+- **Students** learning medical data visualization
 
-## ✨ Features
+## Features
 
-### 🎨 Interactive Timeline Visualization
+### Interactive Timeline Visualization
 - **Gantt-style charts** showing events over time
 - **Hover tooltips** with detailed event information
 - **Zoom and pan** capabilities for detailed exploration
 - **Color-coded events** by medical category
 - **Smart lab test spacing** for same-day multiple tests
 
-### 🏷️ Advanced Flare Labeling
+### Advanced Flare Labeling
 - **Monthly labeling system** for disease activity
 - **Category-based evidence** linking flares to event types
 - **Reason documentation** for clinical notes
 - **Visual flare indicators** on timelines
 - **Persistent storage** of all labels in JSON format
 
-### 🔐 Team-Based Access Control
+### Team-Based Access Control
 - **Patient group isolation** for research teams
 - **Command-line access control** for different user roles
 - **Custom patient ranges** for specific studies
 - **Admin access** for supervisors
 
-### 📊 Data Management
+### Data Management
 - **Automatic data loading** from CSV files
 - **Real-time filtering** by IBD relevance
 - **Export capabilities** to CSV/Excel
 - **Cross-tab synchronization** between views
 
-### 🎯 User-Friendly Interface
+### User-Friendly Interface
 - **Three-tab layout**: Overview, Timeline, Labeling
 - **Clean, medical-grade design** with professional styling
 - **Responsive layout** for different screen sizes
 - **Comprehensive help documentation**
 
-## 📦 Installation
+## Installation
 
 ### Prerequisites
 
@@ -105,7 +105,7 @@ cd patient-timeline-viewer
 # Install required Python packages
 pip install gradio pandas plotly numpy openpyxl
 
-# Or install from requirements.txt (if provided)
+# Or install from requirements.txt 
 pip install -r requirements.txt
 ```
 
@@ -121,7 +121,7 @@ If successful, you should see:
 Running on local URL:  http://127.0.0.1:7860
 ```
 
-## 🚀 Quick Start
+## Quick Start
 
 ### 1. **Launch with Sample Data** (Recommended for first-time users)
 
@@ -148,7 +148,7 @@ Navigate to: `http://127.0.0.1:7860`
 - **Hover over events** to see detailed information
 - **Create a monthly label** in the Labelling Mode tab
 
-## 🔧 Usage
+## Usage
 
 ### Command Line Options
 
@@ -205,7 +205,7 @@ The application looks for data in:
 python main.py group-a  # or group-b, group-c, etc.
 ```
 
-## 📊 Data Format
+## Data Format
 
 ### Required CSV Structure
 
@@ -246,7 +246,7 @@ patient_id,start_date,end_date,event_type,ibd_related,event_info,source_dataset
 12345,2023-01-15,2023-01-15,ambulatory_visit,True,"{""Patient Age"": 45, ""Diagnosis"": ""Crohn's Disease""}",CLAIMS
 ```
 
-## 🏗️ Architecture
+## Architecture
 
 ### System Overview
 
@@ -290,9 +290,9 @@ timeline_visualization.py
 └── Interactive Features
 ```
 
-## 🎨 User Interface
+## User Interface
 
-### Tab 1: Data Overview 📊
+### Tab 1: Data Overview
 
 **Purpose**: Monitor data loading status and export capabilities
 
@@ -337,7 +337,7 @@ timeline_visualization.py
 - **Zoom and pan** for detailed exploration
 - **Flare indicators** (red rectangles for monthly flares)
 
-### Tab 3: Labelling Mode 🏷️
+### Tab 3: Labelling Mode 
 
 **Purpose**: Efficient monthly flare labeling with timeline context
 
@@ -377,7 +377,7 @@ timeline_visualization.py
 - **Reason Field**: Optional text documentation
 - **Save/Clear**: Label management buttons
 
-## 🔐 Access Control
+## Access Control
 
 ### Team-Based Patient Access
 
@@ -434,14 +434,14 @@ python main.py admin
 ## 📁 File Structure
 
 ```
-patient-timeline-viewer/
-├── main.py                     # 🎯 Application entry point & UI
-├── patient_timeline_webapp.py     # 🏥 Core application logic
-├── monthly_labelling.py        # 🏷️ Flare labeling functionality
-├── timeline_visualization.py   # 📊 Chart creation & visualization
-├── README.md                   # 📖 This documentation
-├── requirements.txt            # 📦 Python dependencies
-└── data/                       # 📁 Data directory, repo path: '/data/external_ps/baumgart/BAUMGART_SHARED/Baumgart_IBD/Sacha/ibd_activity_viewer'
+ibd-data-labelling-webapp
+├── main.py                     # Application entry point & UI
+├── patient_timeline_webapp.py     # Core application logic
+├── monthly_labelling.py        # Flare labeling functionality
+├── timeline_visualization.py   # Chart creation & visualization
+├── README.md                   # This documentation
+├── requirements.txt            # Python dependencies
+└── data/                       # Data directory, repo path: '/data/external_ps/baumgart/BAUMGART_SHARED/Baumgart_IBD/Sacha/ibd_activity_viewer'
     └── selected_events_mia_patients.csv  # Selected 10 patients' data
 ```
 
@@ -584,7 +584,7 @@ python main.py group-a
 python main.py custom --start 1 --end 10 --name "Test"
 ```
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### Common Issues and Solutions
 
@@ -675,18 +675,6 @@ ls -la
 2. **Filter data** by date range
 3. **Use smaller datasets** for testing
 
-### Debug Mode
-
-Enable detailed logging by modifying `main.py`:
-
-```python
-# Add at the top of main.py
-import logging
-logging.basicConfig(level=logging.DEBUG)
-
-# Or run with debug flag
-python main.py dev --debug
-```
 
 ### Getting Help
 
@@ -696,7 +684,7 @@ python main.py dev --debug
 4. **Check file permissions** for data directories
 5. **Consult this README** for configuration details
 
-## 📖 API Reference
+## API Reference
 
 ### PatientTimelineApp Class
 
@@ -787,7 +775,7 @@ Generates rich hover tooltips for timeline events.
 - `reload_data_btn.click()`: Refresh data from files
 - `export_btn.click()`: Export data to file
 
-## 🤝 Contributing
+## Contributing
 
 ### Development Workflow
 
@@ -835,7 +823,7 @@ For new features, please describe:
 3. **Alternative approaches** considered
 4. **Impact on existing** functionality
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
@@ -848,8 +836,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - ✅ Grant sublicenses to others
 
 **You must**:
-- 📝 Include the original copyright notice
-- 📝 Include the license text in distributions
+- Include the original copyright notice
+- Include the license text in distributions
 
 **You cannot**:
 - ❌ Hold the authors liable for damages
@@ -875,15 +863,15 @@ python main.py admin
 ```
 
 ### Key Features
-- 📊 **Interactive timelines** with medical events
-- 🏷️ **Monthly flare labeling** with categories
-- 🔐 **Team-based access control** for patient groups
-- 📁 **Data export** to CSV/Excel formats
-- 🎨 **Professional medical interface**
+- **Interactive timelines** with medical events
+- **Monthly flare labeling** with categories
+- **Team-based access control** for patient groups
+- **Data export** to CSV/Excel formats
+- **Professional medical interface**
 
 ### Support
-- 📖 **Documentation**: This README
-- 🐛 **Bug Reports**: GitHub Issues
-- 💡 **Feature Requests**: GitHub Discussions
+- **Documentation**: This README
+- **Bug Reports**: GitHub Issues
+- **Feature Requests**: GitHub Discussions
 
 ---
