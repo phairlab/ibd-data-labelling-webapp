@@ -1,0 +1,16 @@
+{
+  "2009-12": {
+    "evidence": "Yes",
+    "categories": [
+      "lab_test"
+    ],
+    "reason": "xxx"
+  },
+  "2008-05": {
+    "evidence": "Yes",
+    "categories": [
+      "prescription"
+    ],
+    "reason": ""
+  }
+}

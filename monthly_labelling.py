@@ -1,67 +1,168 @@
+# ============================================================================
+# MONTHLY LABELLING MODULE - FLARE MANAGEMENT SYSTEM
+# ============================================================================
+#
+# This module handles the monthly flare labelling functionality for the 
+# Patient Timeline Viewer. It allows medical professionals to:
+#
+# 1. Label months as having flare evidence or not
+# 2. Categorize flares by medical event types
+# 3. Add optional reasoning/notes for each flare
+# 4. Edit and delete existing flare labels
+# 5. Persist labels to JSON files for each patient
+#
+# The module uses a functional approach with separate functions that are
+# dynamically added to the PatientTimelineApp class to maintain clean
+# separation of concerns.
+#
+# File Format: patient_{patient_id}_monthly_labels.json
+# Structure: {
+#   "2023-01": {
+#     "evidence": "Yes",
+#     "categories": ["ambulatory_visit", "lab_test"],
+#     "reason": "Elevated inflammatory markers"
+#   }
+# }
+# ============================================================================
+
 import pandas as pd
 import json
 import os
 
 
 def save_monthly_label(app, selected_month, evidence, categories, reason):
-    """Save monthly flare label"""
+    """
+    Save or update a monthly flare label for the current patient.
+    
+    This function validates the input, converts human-readable categories to
+    internal format, and persists the label to a JSON file. It's the main
+    function called when doctors save their flare assessments.
+    
+    Args:
+        app: PatientTimelineApp instance containing current patient context
+        selected_month (str): Month in "January 2023" format
+        evidence (str): "Yes" or "No" - whether flare evidence exists
+        categories (list): List of readable category names (e.g., ["Lab Test"])
+        reason (str): Optional text explanation for the flare assessment
+    
+    Returns:
+        tuple: (status_message, updated_labels_info_string)
+            - status_message: Success/error message for user feedback
+            - updated_labels_info_string: Formatted summary of all labels
+    
+    Validation:
+        - Requires month selection
+        - If evidence="Yes", requires at least one category
+        - Handles invalid date formats gracefully
+    """
+    # Input validation - month must be selected
     if not selected_month:
         return "Please select a month", ""
     
+    # Validation - if marking as flare, must specify categories
     if evidence == "Yes" and not categories:
         return "Please select at least one category when evidence is Yes", ""
     
     try:
-        # Convert month to period
+
+        # DEBUG: Print current working directory and file path
+        import os
+        cwd = os.getcwd()
+        save_file = f'patient_{self.current_patient_id}_monthly_labels.json'
+        full_path = os.path.abspath(save_file)
+        
+        print(f"\n=== SAVE MONTHLY LABEL DEBUG ===")
+        print(f"Current Working Directory: {cwd}")
+        print(f"Save File Name: {save_file}")
+        print(f"Full Path: {full_path}")
+        print(f"Directory Writable: {os.access(cwd, os.W_OK)}")
+        print(f"File Exists: {os.path.exists(save_file)}")
+        if os.path.exists(save_file):
+            print(f"File Writable: {os.access(save_file, os.W_OK)}")
+        print(f"User: {os.environ.get('USER', 'unknown')}")
+        print(f"================================\n")
+        # Convert human-readable month (e.g., "January 2023") to pandas Period
+        # This standardizes the date format for consistent storage
         selected_period = pd.to_datetime(selected_month, format='%B %Y').to_period('M')
         
-        # Convert readable labels to internal format
+        # Map user-friendly category names to internal database format
+        # This allows the UI to show readable names while maintaining
+        # consistent internal naming conventions
         label_to_internal = {
-            'Ambulatory Visit': 'ambulatory_visit',
-            'Lab Test': 'lab_test', 
-            'Prescription': 'prescription',
-            'Physician Claim': 'physician_claim',
-            'Hospital Admission': 'hospital_admission',
-            'Imaging': 'imaging'
+            'Ambulatory Visit': 'ambulatory_visit',     # Outpatient visits
+            'Lab Test': 'lab_test',                     # Laboratory tests
+            'Prescription': 'prescription',             # Medication prescriptions
+            'Physician Claim': 'physician_claim',       # Insurance claims
+            'Hospital Admission': 'hospital_admission', # Inpatient stays
+            'Imaging': 'imaging'                        # Medical imaging
         }
-        internal_categories = [label_to_internal.get(cat, cat.lower().replace(' ', '_')) for cat in categories] if categories else []
         
-        # Load existing monthly labels
+        # Convert selected categories to internal format
+        # Handle edge case where category might not be in mapping
+        internal_categories = [
+            label_to_internal.get(cat, cat.lower().replace(' ', '_')) 
+            for cat in categories
+        ] if categories else []
+        
+        # Load existing labels for this patient (returns empty dict if none exist)
         monthly_labels = load_monthly_labels(app)
         
-        # Update or add label for this month
+        # Create/update the label entry for this specific month
+        # Using string representation of period for JSON compatibility
         monthly_labels[str(selected_period)] = {
-            "evidence": evidence,
-            "categories": internal_categories,
-            "reason": reason or ""
+            "evidence": evidence,           # "Yes" or "No"
+            "categories": internal_categories,  # List of internal category names
+            "reason": reason or ""         # Empty string if no reason provided
         }
         
-        # Save monthly labels
+        # Persist the updated labels to file
         save_monthly_labels(app, monthly_labels)
         
-        # Update labels info display
+        # Generate updated summary text for UI display
         labels_info = get_monthly_labels_info(app)
         
+        # Return success message and updated labels summary
         return f"Label saved for {selected_month}: Evidence={evidence}", labels_info
         
     except Exception as e:
+        # Handle any errors (date parsing, file I/O, etc.) gracefully
         return f"Failed to save label: {str(e)}", ""
 
 
 def clear_monthly_label(app, selected_month):
-    """Clear label for selected month"""
+    """
+    Remove a monthly flare label for the selected month.
+    
+    This function deletes an existing label entry and updates the persistent
+    storage. Used when doctors want to remove an incorrect or outdated assessment.
+    
+    Args:
+        app: PatientTimelineApp instance containing current patient context
+        selected_month (str): Month in "January 2023" format to clear
+    
+    Returns:
+        tuple: (status_message, updated_labels_info_string)
+            - status_message: Confirmation or error message
+            - updated_labels_info_string: Updated summary of remaining labels
+    """
+    # Input validation
     if not selected_month:
         return "Please select a month", ""
     
     try:
+        # Convert month string to standardized period format
         selected_period = pd.to_datetime(selected_month, format='%B %Y').to_period('M')
         
+        # Load current labels for this patient
         monthly_labels = load_monthly_labels(app)
         
+        # Remove the label if it exists (no error if it doesn't exist)
         if str(selected_period) in monthly_labels:
             del monthly_labels[str(selected_period)]
+            # Save the updated labels back to file
             save_monthly_labels(app, monthly_labels)
         
+        # Generate updated summary for UI
         labels_info = get_monthly_labels_info(app)
         
         return f"Label cleared for {selected_month}", labels_info
@@ -71,43 +172,245 @@ def clear_monthly_label(app, selected_month):
 
 
 def load_monthly_labels(app):
-    """Load monthly labels from JSON file"""
+    """
+    Load monthly labels from JSON file for the current patient.
+    
+    This function reads the persistent storage file for the current patient's
+    monthly flare labels. Each patient has their own JSON file to maintain
+    data isolation and enable easy backup/transfer of individual patient data.
+    
+    Args:
+        app: PatientTimelineApp instance with current_patient_id attribute
+    
+    Returns:
+        dict: Dictionary of monthly labels in format:
+              {"2023-01": {"evidence": "Yes", "categories": [...], "reason": "..."}}
+              Returns empty dict if no file exists or on error
+    
+    File Naming Convention: patient_{patient_id}_monthly_labels.json
+    """
+    # Safety check - ensure we have a current patient loaded
     if app.current_patient_id is None:
+        print("WARNING: No patient ID set for loading labels")
         return {}
     
+    # Generate filename based on current patient ID
+    # This ensures each patient's labels are stored separately
     save_file = f'patient_{app.current_patient_id}_monthly_labels.json'
+    full_path = os.path.abspath(save_file)
+
+    print(f"\n=== LOAD MONTHLY LABELS ===")
+    print(f"Looking for file: {full_path}")
+    print(f"File exists: {os.path.exists(save_file)}")
     
+    # Check if labels file exists for this patient
     if os.path.exists(save_file):
         try:
+            # Load and parse JSON data
             with open(save_file, 'r') as f:
-                return json.load(f)
+                data = json.load(f)
+            
+            # Now that we have data, let's print debug info
+            print(f"Type of data: {type(data)}")
+            print(f"Loaded {len(data)} monthly labels successfully")
+            
+            if data:
+                print(f"Label months: {list(data.keys())}")
+                # Show first label as example
+                first_key = list(data.keys())[0]
+                print(f"Example label ({first_key}): {data[first_key]}")
+            
+            print("============================\n")
+            return data
+            
         except Exception as e:
+            # Handle file corruption, permission errors, etc.
             print(f"Error loading monthly labels: {e}")
+            import traceback
+            traceback.print_exc()
+            print("============================\n")
             return {}
+    else:
+        print("No saved monthly labels file found (this is normal for new patients)")
+        print("============================\n")
+        return {}
+    
+    # This line should never be reached, but just in case
     return {}
+
+#########
+def save_monthly_label(app, selected_month, evidence, categories, reason):
+    """
+    Save or update a monthly flare label for the current patient.
+    """
+    # Input validation - month must be selected
+    if not selected_month:
+        return "Please select a month", ""
+    
+    # Validation - if marking as flare, must specify categories
+    if evidence == "Yes" and not categories:
+        return "Please select at least one category when evidence is Yes", ""
+    
+    try:
+        # DEBUG: Print current working directory and file path
+        import os
+        cwd = os.getcwd()
+        save_file = f'patient_{app.current_patient_id}_monthly_labels.json'  # Fixed: use app not self
+        full_path = os.path.abspath(save_file)
+        
+        print(f"\n{'='*50}")
+        print(f"SAVE MONTHLY LABEL DEBUG")
+        print(f"{'='*50}")
+        print(f"Timestamp: {pd.Timestamp.now()}")
+        print(f"Current Patient ID: {app.current_patient_id}")
+        print(f"Current Working Directory: {cwd}")
+        print(f"Save File Name: {save_file}")
+        print(f"Full Path: {full_path}")
+        print(f"Directory Writable: {os.access(cwd, os.W_OK)}")
+        print(f"File Exists: {os.path.exists(save_file)}")
+        if os.path.exists(save_file):
+            print(f"File Writable: {os.access(save_file, os.W_OK)}")
+            print(f"File Size: {os.path.getsize(save_file)} bytes")
+        print(f"User: {os.environ.get('USER', 'unknown')}")
+        print(f"\nData to save:")
+        print(f"  Month: {selected_month}")
+        print(f"  Evidence: {evidence}")
+        print(f"  Categories: {categories}")
+        print(f"  Reason: {reason}")
+        print(f"{'='*50}\n")
+        
+        # Convert human-readable month to pandas Period
+        selected_period = pd.to_datetime(selected_month, format='%B %Y').to_period('M')
+        
+        # Map user-friendly category names to internal database format
+        label_to_internal = {
+            'Ambulatory Visit': 'ambulatory_visit',
+            'Lab Test': 'lab_test',
+            'Prescription': 'prescription',
+            'Physician Claim': 'physician_claim',
+            'Hospital Admission': 'hospital_admission',
+            'Imaging': 'imaging'
+        }
+        
+        # Convert selected categories to internal format
+        internal_categories = [
+            label_to_internal.get(cat, cat.lower().replace(' ', '_')) 
+            for cat in categories
+        ] if categories else []
+        
+        # Load existing labels for this patient (returns empty dict if none exist)
+        monthly_labels = load_monthly_labels(app)
+        
+        print(f"Existing labels count before save: {len(monthly_labels)}")
+        
+        # Create/update the label entry for this specific month
+        monthly_labels[str(selected_period)] = {
+            "evidence": evidence,
+            "categories": internal_categories,
+            "reason": reason or ""
+        }
+        
+        print(f"Labels count after update: {len(monthly_labels)}")
+        
+        # Persist the updated labels to file
+        save_monthly_labels(app, monthly_labels)
+        
+        # Generate updated summary text for UI display
+        labels_info = get_monthly_labels_info(app)
+        
+        # Return success message and updated labels summary
+        return f"Label saved for {selected_month}: Evidence={evidence}", labels_info
+        
+    except Exception as e:
+        print(f"\n{'!'*50}")
+        print(f"ERROR in save_monthly_label: {e}")
+        import traceback
+        traceback.print_exc()
+        print(f"{'!'*50}\n")
+        return f"Failed to save label: {str(e)}", ""
 
 
 def save_monthly_labels(app, labels):
-    """Save monthly labels to JSON file"""
+    """
+    Save monthly labels dictionary to JSON file for the current patient.
+    """
+    # Safety check - ensure we have a current patient
     if app.current_patient_id is None:
+        print("ERROR: No patient ID set - cannot save")
         return
     
     try:
+        # Generate patient-specific filename
         save_file = f'patient_{app.current_patient_id}_monthly_labels.json'
+        full_path = os.path.abspath(save_file)
+        
+        print(f"\n{'='*50}")
+        print(f"SAVE MONTHLY LABELS TO FILE")
+        print(f"{'='*50}")
+        print(f"Timestamp: {pd.Timestamp.now()}")
+        print(f"Patient ID: {app.current_patient_id}")
+        print(f"Save Path: {full_path}")
+        print(f"Number of labels to save: {len(labels)}")
+        print(f"Labels data: {json.dumps(labels, indent=2)}")
+        
+        # Write labels to file with pretty formatting (indent=2)
         with open(save_file, 'w') as f:
             json.dump(labels, f, indent=2)
+            
+        # Verify the save
+        if os.path.exists(save_file):
+            file_size = os.path.getsize(save_file)
+            print(f"✓ Save successful! File size: {file_size} bytes")
+            
+            # Try to read it back
+            with open(save_file, 'r') as f:
+                verify_data = json.load(f)
+                print(f"✓ Verification read successful: {len(verify_data)} labels")
+        else:
+            print("✗ ERROR: File doesn't exist after save attempt!")
+        print(f"{'='*50}\n")    
+            
     except Exception as e:
-        print(f"Error saving monthly labels: {e}")
-
+        print(f"\n{'!'*50}")
+        print(f"ERROR in save_monthly_labels: {e}")
+        print(f"Error Type: {type(e).__name__}")
+        import traceback
+        traceback.print_exc()
+        print(f"{'!'*50}\n")
+#########
 
 def get_monthly_labels_info(app):
-    """Get formatted string of all monthly labels"""
+    """
+    Generate a formatted string summary of all monthly labels for display.
+    
+    This function creates a human-readable summary of all saved flare labels
+    for the current patient. It's used to populate the "Saved Labels" text
+    area in the UI, giving doctors a quick overview of their assessments.
+    
+    Args:
+        app: PatientTimelineApp instance containing current patient context
+    
+    Returns:
+        str: Multi-line formatted string with one line per labeled month
+             Example: "January 2023: Yes (Lab Test, Prescription) - High CRP levels"
+             Returns "No labels saved yet" if no labels exist
+    
+    Format Per Line:
+        - Month Year: Evidence (Categories) - Reason
+        - Categories only shown if evidence="Yes"
+        - Reason only shown if provided
+    """
+    # Load all labels for current patient
     monthly_labels = load_monthly_labels(app)
     
+    # Handle case where no labels exist yet
     if not monthly_labels:
         return "No labels saved yet"
     
     info_lines = []
+    
+    # Mapping from internal category names to user-friendly display names
+    # This is the reverse of the mapping used in save_monthly_label()
     label_mapping = {
         'ambulatory_visit': 'Ambulatory Visit',
         'lab_test': 'Lab Test',
@@ -117,20 +420,28 @@ def get_monthly_labels_info(app):
         'imaging': 'Imaging'
     }
     
+    # Process each month's label in chronological order
     for month_period, label_data in sorted(monthly_labels.items()):
         try:
+            # Convert period string back to readable month format
             period = pd.Period(month_period)
-            month_str = period.strftime('%B %Y')
+            month_str = period.strftime('%B %Y')  # "January 2023"
+            
+            # Extract label components with defaults
             evidence = label_data.get('evidence', 'No')
             
+            # Start building the display line
             line = f"{month_str}: {evidence}"
             
+            # Add category information if this is a positive flare assessment
             if evidence == "Yes":
                 categories = label_data.get('categories', [])
                 if categories:
+                    # Convert internal names to readable names
                     readable_cats = [label_mapping.get(cat, cat) for cat in categories]
                     line += f" ({', '.join(readable_cats)})"
                 
+                # Add reason if provided
                 reason = label_data.get('reason', '')
                 if reason:
                     line += f" - {reason}"
@@ -138,25 +449,51 @@ def get_monthly_labels_info(app):
             info_lines.append(line)
             
         except Exception as e:
+            # Handle individual label formatting errors without breaking entire summary
             print(f"Error formatting label: {e}")
             continue
     
+    # Join all lines into a single string for display
     return "\n".join(info_lines)
 
 
 def get_monthly_labels_list(app):
-    """Get list of months with labels for editing dropdown"""
+    """
+    Get a list of months that have existing labels for the edit dropdown.
+    
+    This function generates a list of month strings for populating the
+    "Select Month to Edit" dropdown. It only includes months that already
+    have labels, making it easy for doctors to find and edit existing assessments.
+    
+    Args:
+        app: PatientTimelineApp instance containing current patient context
+    
+    Returns:
+        list: List of month strings in "January 2023" format
+              Returns empty list if no labels exist
+              Sorted chronologically (oldest first)
+    
+    Used By: Edit dropdown in the labelling interface
+    """
+    # Load existing labels
     monthly_labels = load_monthly_labels(app)
+    
+    # Return empty list if no labels exist
     if not monthly_labels:
         return []
     
     month_list = []
+    
+    # Convert each month period to readable format
     for month_period_str in sorted(monthly_labels.keys()):
         try:
+            # Parse period string and format for display
             period = pd.Period(month_period_str)
             month_str = period.strftime('%B %Y')
             month_list.append(month_str)
+            
         except Exception as e:
+            # Skip invalid period entries without breaking the entire list
             print(f"Error formatting month: {e}")
             continue
     
@@ -164,21 +501,45 @@ def get_monthly_labels_list(app):
 
 
 def load_label_for_edit(app, edit_month):
-    """Load existing label for editing"""
+    """
+    Load an existing monthly label's data for editing in the form.
+    
+    This function retrieves a specific month's label data and formats it
+    for display in the editing form. It converts internal category names
+    back to user-friendly names and populates all form fields.
+    
+    Args:
+        app: PatientTimelineApp instance containing current patient context
+        edit_month (str): Month in "January 2023" format to load for editing
+    
+    Returns:
+        tuple: (evidence, readable_categories, reason, status_message)
+            - evidence (str): "Yes" or "No"
+            - readable_categories (list): User-friendly category names
+            - reason (str): Reason text or empty string
+            - status_message (str): Success or error message for user feedback
+    
+    Used By: "Load for Edit" button in the labelling interface
+    """
+    # Input validation
     if not edit_month:
         return "No", [], "", "Please select a month to edit"
     
     try:
+        # Convert month string to period for lookup
         selected_period = pd.to_datetime(edit_month, format='%B %Y').to_period('M')
         monthly_labels = load_monthly_labels(app)
         
+        # Check if label exists for this month
         if str(selected_period) in monthly_labels:
+            # Extract label data with safe defaults
             label_data = monthly_labels[str(selected_period)]
             evidence = label_data.get('evidence', 'No')
             categories = label_data.get('categories', [])
             reason = label_data.get('reason', '')
             
-            # Convert internal categories to readable labels
+            # Convert internal category names to readable names for form display
+            # This is the reverse mapping of what's used in save_monthly_label()
             internal_to_label = {
                 'ambulatory_visit': 'Ambulatory Visit',
                 'lab_test': 'Lab Test',
@@ -187,66 +548,144 @@ def load_label_for_edit(app, edit_month):
                 'hospital_admission': 'Hospital Admission',
                 'imaging': 'Imaging'
             }
-            readable_categories = [internal_to_label.get(cat, cat.replace('_', ' ').title()) for cat in categories]
+            
+            # Convert categories, handling any unknown categories gracefully
+            readable_categories = [
+                internal_to_label.get(cat, cat.replace('_', ' ').title()) 
+                for cat in categories
+            ]
             
             return evidence, readable_categories, reason, f"Loaded label for {edit_month}"
         else:
+            # No label exists for this month
             return "No", [], "", f"No label found for {edit_month}"
             
     except Exception as e:
+        # Handle date parsing or other errors
         return "No", [], "", f"Failed to load label: {str(e)}"
 
 
 def delete_monthly_label(app, edit_month):
-    """Delete label for selected month"""
+    """
+    Permanently delete a monthly label for the specified month.
+    
+    This function removes a label entry from the patient's data and updates
+    the persistent storage. Unlike clear_monthly_label(), this is specifically
+    designed for the edit interface and includes additional safety checks.
+    
+    Args:
+        app: PatientTimelineApp instance containing current patient context
+        edit_month (str): Month in "January 2023" format to delete
+    
+    Returns:
+        tuple: (status_message, updated_labels_info_string)
+            - status_message: Confirmation or error message
+            - updated_labels_info_string: Updated summary of remaining labels
+    
+    Safety Features:
+        - Validates month selection
+        - Handles non-existent labels gracefully
+        - Updates persistent storage immediately
+        - Provides clear user feedback
+    """
+    # Input validation
     if not edit_month:
         return "Please select a month to delete", ""
     
     try:
+        # Convert month to period for lookup
         selected_period = pd.to_datetime(edit_month, format='%B %Y').to_period('M')
         monthly_labels = load_monthly_labels(app)
         
+        # Check if label exists before attempting deletion
         if str(selected_period) in monthly_labels:
+            # Remove the label entry
             del monthly_labels[str(selected_period)]
+            
+            # Save updated labels to persistent storage
             save_monthly_labels(app, monthly_labels)
+            
+            # Generate updated summary for UI
             labels_info = get_monthly_labels_info(app)
             return f"Label deleted for {edit_month}", labels_info
         else:
+            # Label doesn't exist - still return current labels info
             return f"No label found for {edit_month}", get_monthly_labels_info(app)
             
     except Exception as e:
+        # Handle errors and still return current labels info for consistency
         return f"Failed to delete label: {str(e)}", get_monthly_labels_info(app)
 
 
-# Add these methods to the PatientTimelineApp class
+# ============================================================================
+# CLASS METHOD INJECTION SYSTEM
+# ============================================================================
+# This section dynamically adds all the monthly labelling functions as methods
+# to the PatientTimelineApp class. This approach maintains clean separation
+# between the core app functionality and the labelling features while allowing
+# the labelling functions to access app state (current_patient_id, etc.)
+
 def add_monthly_labelling_methods(app_class):
-    """Add monthly labelling methods to the app class"""
+    """
+    Dynamically add monthly labelling methods to the PatientTimelineApp class.
+    
+    This function uses Python's dynamic method injection to add all the
+    monthly labelling functionality to the main app class. This approach:
+    
+    1. Keeps the labelling code modular and separate
+    2. Allows labelling functions to access app instance state
+    3. Maintains clean import structure in the main application
+    4. Enables easy testing of labelling functions in isolation
+    
+    Args:
+        app_class (class): The PatientTimelineApp class to extend
+    
+    Method Naming Convention:
+        - External functions: snake_case (e.g., save_monthly_label)
+        - Injected methods: same name with _method suffix during injection
+        - Final methods: original snake_case name on the class
+    
+    Usage: Called once during app initialization in main.py
+    """
+    
+    # Define wrapper methods that pass 'self' as the 'app' parameter
+    # This allows the external functions to access instance attributes
+    # while maintaining their functional interface
     
     def save_monthly_label_method(self, selected_month, evidence, categories, reason):
+        """Instance method wrapper for save_monthly_label function"""
         return save_monthly_label(self, selected_month, evidence, categories, reason)
     
     def clear_monthly_label_method(self, selected_month):
+        """Instance method wrapper for clear_monthly_label function"""
         return clear_monthly_label(self, selected_month)
     
     def load_monthly_labels_method(self):
+        """Instance method wrapper for load_monthly_labels function"""
         return load_monthly_labels(self)
     
     def save_monthly_labels_method(self, labels):
+        """Instance method wrapper for save_monthly_labels function"""
         return save_monthly_labels(self, labels)
     
     def get_monthly_labels_info_method(self):
+        """Instance method wrapper for get_monthly_labels_info function"""
         return get_monthly_labels_info(self)
     
     def get_monthly_labels_list_method(self):
+        """Instance method wrapper for get_monthly_labels_list function"""
         return get_monthly_labels_list(self)
     
     def load_label_for_edit_method(self, edit_month):
+        """Instance method wrapper for load_label_for_edit function"""
         return load_label_for_edit(self, edit_month)
     
     def delete_monthly_label_method(self, edit_month):
+        """Instance method wrapper for delete_monthly_label function"""
         return delete_monthly_label(self, edit_month)
     
-    # Add methods to class
+    # Inject all methods into the class
+    # These become regular instance methods that can be called as app.method_name()
     app_class.save_monthly_label = save_monthly_label_method
     app_class.clear_monthly_label = clear_monthly_label_method
     app_class.load_monthly_labels = load_monthly_labels_method

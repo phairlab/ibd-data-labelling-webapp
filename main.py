@@ -1,3 +1,20 @@
+# ============================================================================
+# PATIENT TIMELINE VIEWER - MAIN APPLICATION INTERFACE
+# ============================================================================
+# 
+# This is the main entry point for the Patient Timeline Viewer application.
+# It creates a Gradio web interface for doctors to view patient medical timelines
+# and add/manage disease flare periods.
+#
+# The application supports:
+# - Multiple patient access groups (command-line controlled)
+# - Timeline visualization with event filtering
+# - Monthly flare labelling system
+# - Data export capabilities
+#
+# Usage: python main.py [group-a|group-b|group-c|custom|admin|dev] [options]
+# ============================================================================
+
 import gradio as gr
 import argparse
 import sys
@@ -5,50 +22,70 @@ from patient_timeline_webapp import PatientTimelineApp
 from monthly_labelling import add_monthly_labelling_methods
 from timeline_visualization import create_main_timeline, create_monthly_timeline
 
-# Initialize the app (will be created with command line arguments)
+# Global app instance - will be initialized with command line arguments
 app = None
 
 def parse_arguments():
-    """Parse command line arguments to determine patient access"""
+    """
+    Parse command line arguments to determine patient access permissions.
+    
+    This function sets up different patient groups to control which patients
+    each user/team can access. This is useful for:
+    - Research teams working on specific cohorts  
+    - Clinical teams with different responsibilities
+    - Limiting access for security/privacy reasons
+    
+    Returns:
+        argparse.Namespace: Parsed command line arguments
+    """
     parser = argparse.ArgumentParser(description='Patient Timeline Viewer with Patient Group Access Control')
     
-    # Define different patient groups/commands
+    # Create subcommands for different patient access groups
     subparsers = parser.add_subparsers(dest='command', help='Available patient groups')
     
-    # Group A: Patients 1-100
+    # GROUP A: Patients 1-100 (e.g., for Research Team A)
     group_a = subparsers.add_parser('group-a', help='Access patients 1-100')
     group_a.add_argument('--start', type=int, default=1, help='Start patient ID (default: 1)')
     group_a.add_argument('--end', type=int, default=100, help='End patient ID (default: 100)')
     
-    # Group B: Patients 101-200
+    # GROUP B: Patients 101-200 (e.g., for Research Team B)
     group_b = subparsers.add_parser('group-b', help='Access patients 101-200')
     group_b.add_argument('--start', type=int, default=101, help='Start patient ID (default: 101)')
     group_b.add_argument('--end', type=int, default=200, help='End patient ID (default: 200)')
     
-    # Group C: Patients 201-300
+    # GROUP C: Patients 201-300 (e.g., for Clinical Team)
     group_c = subparsers.add_parser('group-c', help='Access patients 201-300')
     group_c.add_argument('--start', type=int, default=201, help='Start patient ID (default: 201)')
     group_c.add_argument('--end', type=int, default=300, help='End patient ID (default: 300)')
     
-    # Custom range
+    # CUSTOM RANGE: For specific research projects or temporary access
     custom = subparsers.add_parser('custom', help='Access custom patient range')
     custom.add_argument('--start', type=int, required=True, help='Start patient ID')
     custom.add_argument('--end', type=int, required=True, help='End patient ID')
     custom.add_argument('--name', type=str, default='Custom', help='Group name for display')
     
-    # Admin access (all patients)
+    # ADMIN ACCESS: All patients (for administrators/supervisors)
     admin = subparsers.add_parser('admin', help='Access all patients (admin mode)')
     
-    # Development mode (sample data)
+    # DEVELOPMENT MODE: Sample data for testing/development
     dev = subparsers.add_parser('dev', help='Development mode with sample data')
     dev.add_argument('--patients', type=int, default=50, help='Number of sample patients (default: 50)')
     
     return parser.parse_args()
 
 def create_app_with_args():
-    """Create app instance based on command line arguments"""
+    """
+    Create PatientTimelineApp instance based on command line arguments.
+    
+    This function interprets the parsed command line arguments and creates
+    the appropriate app instance with the correct patient access permissions.
+    
+    Returns:
+        PatientTimelineApp: Configured app instance
+    """
     args = parse_arguments()
     
+    # Create app instance based on which command was used
     if args.command == 'group-a':
         return PatientTimelineApp(patient_range=(args.start, args.end), group_name="Group A")
     elif args.command == 'group-b':
@@ -58,13 +95,16 @@ def create_app_with_args():
     elif args.command == 'custom':
         return PatientTimelineApp(patient_range=(args.start, args.end), group_name=args.name)
     elif args.command == 'admin':
+        # Admin gets access to all patients (no range restriction)
         return PatientTimelineApp(patient_range=None, group_name="Admin (All Patients)")
     elif args.command == 'dev':
+        # Development mode creates app with sample data
         app = PatientTimelineApp(patient_range=None, group_name="Development Mode")
-        # Override with sample data
-        app.combined_data = app.generate_fake_data(args.patients * 20)  # 20 events per patient average
+        # Override with fake data for testing (20 events per patient average)
+        app.combined_data = app.generate_fake_data(args.patients * 20)
         return app
     else:
+        # No valid command provided - show help and exit
         print("No command specified. Available commands:")
         print("  python main.py group-a    # Access patients 1-100")
         print("  python main.py group-b    # Access patients 101-200") 
@@ -75,16 +115,32 @@ def create_app_with_args():
         sys.exit(1)
 
 def create_interface():
-    """Create the Gradio interface"""
+    """
+    Create the main Gradio web interface for the Patient Timeline Viewer.
     
+    This function builds the complete user interface with three main tabs:
+    1. Data Overview - Data loading status and export capabilities
+    2. Timeline Viewer - Main timeline visualization with filtering
+    3. Labelling Mode - Monthly flare labelling interface
+    4. User Guide - Documentation and help
+    
+    Returns:
+        gr.Blocks: Configured Gradio interface
+    """
+    
+    # Create the main Gradio interface with custom theme
     with gr.Blocks(
         title=f"Patient Timeline Viewer - {app.group_name}", 
         theme=gr.themes.Soft(
             font=[gr.themes.GoogleFont("Inter"), "Arial", "Roboto"], 
-            primary_hue="blue"
+            primary_hue="blue"  # Blue theme for medical application
         )
     ) as demo:
-        # Updated CSS styling for clean design
+        
+        # ====================================================================
+        # CUSTOM CSS STYLING
+        # ====================================================================
+        # This CSS provides a clean, professional look for the medical interface
         gr.HTML("""
             <style>
             /* Section title styling with blue underline */
@@ -258,96 +314,133 @@ def create_interface():
             """
         )
         
+        # ====================================================================
+        # MAIN HEADER
+        # ====================================================================
         gr.Markdown(f"# Patient Timeline Viewer - {app.group_name}")
         gr.Markdown("A comprehensive tool for visualizing patient timelines and managing flare periods.")
         
+        # ====================================================================
+        # TAB 1: DATA OVERVIEW
+        # ====================================================================
+        # This tab shows current data status and provides export functionality
         with gr.Tab("Data Overview"):
             gr.Markdown("### Current Data Status")
             
             with gr.Row():
+                # Left column: Data information and reload functionality
                 with gr.Column():
                     gr.Markdown("**Data Information**")
+                    # Shows current data loading status (patient count, date range, etc.)
                     data_status = gr.Textbox(label="Status", value=app.get_data_status(), interactive=False)
+                    # Button to reload data from the file system
                     reload_data_btn = gr.Button("Reload Data", variant="primary")
                 
+                # Right column: Data export functionality
                 with gr.Column():
                     gr.Markdown("**Export Current Data**")
+                    # Radio buttons to choose export format
                     export_format = gr.Radio(["CSV", "Excel"], label="Export format", value="CSV")
+                    # Button to trigger data export
                     export_btn = gr.Button("Export Data")
+                    # Status message for export operations
                     export_status = gr.Textbox(label="Export Status", value="", interactive=False)
         
+        # ====================================================================
+        # TAB 2: TIMELINE VIEWER
+        # ====================================================================
+        # Main timeline visualization tab for viewing patient medical events
         with gr.Tab("Timeline Viewer"):
             with gr.Column():
-                # Top row with patient selection and filters
+                # Top row: Patient selection and filtering controls
                 with gr.Row():
+                    # Left column: Patient selection
                     with gr.Column(scale=1, min_width=200):
                         gr.Markdown("### Patient Selection")
+                        # Dropdown populated with available patient IDs based on access permissions
                         patient_dropdown = gr.Dropdown(
                             label="Patient ID", 
                             choices=app.get_patient_choices(),
                             value=app.get_patient_choices()[0] if app.get_patient_choices() else None,
                             interactive=True
                         )
+                        # Button to manually load timeline (though auto-loading is also enabled)
                         load_timeline_btn = gr.Button("Load Timeline", variant="primary")
                     
+                    # Right column: Chart controls and filters
                     with gr.Column(scale=5):
                         gr.Markdown("### Timeline Chart")
                         
                         # IBD Filter controls above the chart
                         with gr.Row():
+                            # Radio buttons to filter events by IBD relevance
                             ibd_filter = gr.Radio(
                                 choices=["All Events", "IBD Related Only", "Non-IBD Related Only"],
                                 label="Event Filter",
                                 value="All Events",
                                 interactive=True
                             )
+                            # Manual refresh button (changes auto-update, but this provides explicit control)
                             refresh_chart_btn = gr.Button("Refresh Chart", variant="secondary")
                         
+                        # Status message for chart operations
                         chart_status = gr.Textbox(label="Chart Status", value="No chart loaded", interactive=False)
                 
-                # Full width timeline - increased height
+                # Full width timeline plot - main visualization area
                 timeline_plot = gr.Plot(label="Patient Timeline")
                 
-                # Chart info below timeline - decreased height
+                # Chart information panel - shows patient stats and flare summaries
                 chart_info = gr.Textbox(label="Chart Information", value="No patient data loaded", 
                                       lines=3, interactive=False, max_lines=4)
         
+        # ====================================================================
+        # TAB 3: LABELLING MODE
+        # ====================================================================
+        # Monthly flare labelling interface for medical professionals
         with gr.Tab("Labelling Mode"):
-            # Top row with patient selection and chart status - ALIGNED HEADERS
+            # Top row: Patient selection and status (aligned headers for clean look)
             with gr.Row(elem_classes="labelling-top-row"):
+                # Left: Patient selection for labelling
                 with gr.Column(scale=1):
                     gr.HTML("<h3 class='section-title'>Patient Selection</h3>")
+                    # Separate patient dropdown for labelling mode
                     patient_dropdown_label = gr.Dropdown(
                         label="Patient ID", 
                         choices=app.get_patient_choices(),
                         value=app.get_patient_choices()[0] if app.get_patient_choices() else None,
                         interactive=True
                     )
+                    # Load patient specifically for labelling (loads all events, not filtered)
                     load_labelling_btn = gr.Button("Load Patient", variant="primary", size="lg")
                 
+                # Right: Chart status for labelling operations
                 with gr.Column(scale=1):
                     gr.HTML("<h3 class='section-title'>Chart Status</h3>")
+                    # Status updates for labelling operations
                     label_chart_status = gr.Textbox(
                         label="Status",
                         value="Select and load a patient to begin labelling",
                         interactive=False
                     )
             
-            # Main content area
+            # Main content area: Controls and visualization
             with gr.Row():
-                # LEFT COLUMN - Clean single column design
+                # ============================================================
+                # LEFT COLUMN: LABELLING CONTROLS (Clean single column design)
+                # ============================================================
                 with gr.Column(scale=1, min_width=320, elem_classes="clean-control-column"):
                     
-                    # Generating Label For section - CLEAN, NO ARROWS
+                    # --- MONTH SELECTION SECTION ---
                     gr.HTML("<h3 class='section-title'>Generating Label For</h3>")
+                    # Dropdown showing only months that have medical events
                     month_dropdown = gr.Dropdown(
                         label="Select Month",
-                        choices=[],
+                        choices=[],  # Populated after patient is loaded
                         interactive=True,
                         elem_classes="clean-month-dropdown"
                     )
                     
-                    # Month navigation buttons - separate row
+                    # Month navigation buttons (separate row for clean layout)
                     with gr.Row(elem_classes="month-nav-row"):
                         month_back_btn = gr.Button("◀ Previous Month", 
                                                  size="sm", 
@@ -358,56 +451,64 @@ def create_interface():
                                                     variant="secondary", 
                                                     elem_classes="month-nav-button")
                     
-                    # Flare Management section
+                    # --- FLARE LABELLING SECTION ---
                     gr.HTML("<h3 class='section-title'>Flare Management</h3>")
                     
+                    # Main flare evidence question (Yes/No)
                     flare_evidence = gr.Radio(
                         choices=["Yes", "No"],
                         label="Evidence of Flare",
-                        value="No",
+                        value="No",  # Default to No to avoid accidental positive labels
                         interactive=True
                     )
                     
+                    # Category selection (required if evidence = Yes)
+                    # These categories correspond to different types of medical events
                     category_dropdown_label = gr.Dropdown(
                         label="Category (Required if Yes)",
                         choices=[
-                            "Ambulatory Visit",
-                            "Lab Test", 
-                            "Prescription",
-                            "Physician Claim",
-                            "Hospital Admission",
-                            "Imaging"
+                            "Ambulatory Visit",    # Outpatient visits
+                            "Lab Test",           # Laboratory tests
+                            "Prescription",       # Medication prescriptions
+                            "Physician Claim",    # Insurance claims for physician services
+                            "Hospital Admission", # Inpatient hospital stays
+                            "Imaging"            # Medical imaging (X-ray, CT, etc.)
                         ],
                         value=[],
-                        multiselect=True,
+                        multiselect=True,  # Allow multiple categories per flare
                         interactive=True
                     )
                     
+                    # Optional reason/notes field
                     reason_input_label = gr.Textbox(
                         label="Reason (Optional)", 
                         placeholder="Enter reason for flare",
                         lines=2
                     )
 
+                    # Save/Clear buttons for current month
                     with gr.Row():
                         save_label_btn = gr.Button("Save Label", variant="primary", scale=1)
                         clear_label_btn = gr.Button("Clear Label", variant="secondary", scale=1)
 
-                    # Edit section
+                    # --- EDIT EXISTING LABELS SECTION ---
                     gr.HTML("<h3 class='section-title'>Edit Existing Label</h3>")
                     
+                    # Dropdown showing months that already have labels
                     edit_month_dropdown = gr.Dropdown(
                         label="Select Month to Edit",
-                        choices=[],
+                        choices=[],  # Populated with months that have existing labels
                         interactive=True
                     )
 
+                    # Edit/Delete buttons for existing labels
                     with gr.Row():
                         load_edit_btn = gr.Button("Load for Edit", variant="secondary", scale=1)
                         delete_label_btn = gr.Button("Delete Label", variant="stop", scale=1)
 
-                    # Saved labels section
+                    # --- SAVED LABELS SUMMARY ---
                     gr.HTML("<h3 class='section-title'>Saved Labels</h3>")
+                    # Text area showing all saved labels for current patient
                     labels_info = gr.Textbox(
                         label="Labels Summary",
                         value="No labels saved yet",
@@ -416,28 +517,38 @@ def create_interface():
                         max_lines=12
                     )
 
-                # RIGHT COLUMN - Timeline Plot (3/4 width)
+                # ============================================================
+                # RIGHT COLUMN: TIMELINE VISUALIZATION (3/4 width)
+                # ============================================================
                 with gr.Column(scale=3):
                     # Timeline navigation buttons at top of chart
                     with gr.Row(elem_classes="timeline-nav"):
+                        # These buttons allow viewing different months while keeping
+                        # the labelling target month separate
                         view_back_btn_visible = gr.Button("◀ Previous Month", 
                                                         size="sm", 
                                                         variant="secondary")
-                        gr.HTML("<div style='flex: 1;'></div>")  # Spacer
+                        gr.HTML("<div style='flex: 1;'></div>")  # Centered spacer
                         view_forward_btn_visible = gr.Button("Next Month ▶", 
                                                            size="sm", 
                                                            variant="secondary")
                     
+                    # Main monthly timeline plot
+                    # Shows one month at a time with detailed event visualization
                     monthly_timeline_plot = gr.Plot()
                     
-            # Hidden element for current view info (needed for event handlers)
+            # Hidden element needed for event handlers (not visible to user)
             current_view_info_visible = gr.Textbox(
                 label="Current View",
                 value="",
                 interactive=False,
-                visible=False
+                visible=False  # Used internally for state management
             )
         
+        # ====================================================================
+        # TAB 4: USER GUIDE
+        # ====================================================================
+        # Comprehensive documentation for users
         with gr.Tab("User Guide"):
             gr.Markdown("""
             ## Patient Timeline Viewer - User Guide
@@ -543,76 +654,96 @@ def create_interface():
             - **Monthly flares not showing**: Ensure you're viewing the correct patient and the timeline is refreshed
             """)
         
-        # Event handlers
+        # ====================================================================
+        # EVENT HANDLERS - DATA OVERVIEW TAB
+        # ====================================================================
+        
+        # Reload data button: Refreshes data from file system and updates UI
         reload_data_btn.click(
-            app.reload_data,
-            outputs=[data_status, patient_dropdown, chart_info]
+            app.reload_data,  # App method that reloads data from directory
+            outputs=[data_status, patient_dropdown, chart_info]  # Update these UI elements
         )
         
+        # Export data button: Saves current data to CSV or Excel
         export_btn.click(
-            app.export_data,
-            inputs=[export_format],
-            outputs=[export_status]
+            app.export_data,  # App method that handles data export
+            inputs=[export_format],  # Use selected format (CSV/Excel)
+            outputs=[export_status]  # Show export status message
         )
         
-        # Timeline Viewer event handlers - UPDATED TO INCLUDE AUTO-REFRESH
+        # ====================================================================
+        # EVENT HANDLERS - TIMELINE VIEWER TAB
+        # ====================================================================
+        
+        # Manual load timeline button
         load_timeline_btn.click(
-            app.load_patient_timeline,
-            inputs=[patient_dropdown, ibd_filter],
-            outputs=[timeline_plot, chart_status, chart_info]
+            app.load_patient_timeline,  # App method that creates timeline visualization
+            inputs=[patient_dropdown, ibd_filter],  # Current patient and filter settings
+            outputs=[timeline_plot, chart_status, chart_info]  # Update chart and info
         )
         
-        # IBD filter change handler
+        # IBD filter change: Auto-refresh when filter changes
         ibd_filter.change(
-            app.load_patient_timeline,
+            app.load_patient_timeline,  # Same method as manual load
             inputs=[patient_dropdown, ibd_filter],
             outputs=[timeline_plot, chart_status, chart_info]
         )
         
+        # Manual refresh chart button (provides explicit control)
         refresh_chart_btn.click(
             app.load_patient_timeline,
             inputs=[patient_dropdown, ibd_filter],
             outputs=[timeline_plot, chart_status, chart_info]
         )
         
-        # Auto-refresh timeline when switching patients
+        # Auto-refresh timeline when patient changes (key usability feature)
         patient_dropdown.change(
             app.load_patient_timeline,
             inputs=[patient_dropdown, ibd_filter],
             outputs=[timeline_plot, chart_status, chart_info]
         )
         
-        # Create hidden elements needed for event handlers
+        # ====================================================================
+        # EVENT HANDLERS - LABELLING MODE TAB
+        # ====================================================================
+        
+        # Create hidden elements needed for event handlers (required by Gradio)
         current_view_info = gr.Textbox(label="Current View", value="", interactive=False, visible=False)
         view_back_btn = gr.Button("◀ Previous Month", variant="secondary", visible=False)
         view_forward_btn = gr.Button("Next Month ▶", variant="secondary", visible=False)
         
-        # Labelling Mode event handlers
+        # Load patient for labelling: Sets up monthly labelling interface
         load_labelling_btn.click(
-            app.load_patient_for_labelling,
+            app.load_patient_for_labelling,  # App method that prepares patient for monthly labelling
             inputs=[patient_dropdown_label],
             outputs=[label_chart_status, month_dropdown, current_view_info_visible, labels_info]
         )
         
-        # Month navigation - simplified (keeps labeling month separate from view)
+        # --- MONTH NAVIGATION FUNCTIONS ---
+        # These functions handle navigation between months in the labelling interface
+        
         def navigate_month_back(month):
+            """Navigate to previous month in labelling dropdown"""
             new_month = app.navigate_month(month, "back")
-            edit_choices = app.get_monthly_labels_list()
+            edit_choices = app.get_monthly_labels_list()  # Update edit dropdown
             return new_month, gr.update(choices=edit_choices)
         
         def navigate_month_forward(month):
+            """Navigate to next month in labelling dropdown"""
             new_month = app.navigate_month(month, "forward")
-            edit_choices = app.get_monthly_labels_list()
+            edit_choices = app.get_monthly_labels_list()  # Update edit dropdown
             return new_month, gr.update(choices=edit_choices)
         
         def update_month_view(month):
-            app.current_view_offset = 0  # Reset view offset
+            """Update monthly timeline view when month selection changes"""
+            app.current_view_offset = 0  # Reset view offset to show selected month
             if month:
                 fig, status, view_info = app.update_monthly_view(month, 0)
                 edit_choices = app.get_monthly_labels_list()
                 return fig, status, view_info, gr.update(choices=edit_choices)
             return None, "No month selected", "", gr.update(choices=[])
         
+        # Month navigation button event handlers
         month_back_btn.click(
             navigate_month_back,
             inputs=[month_dropdown],
@@ -625,26 +756,30 @@ def create_interface():
             outputs=[month_dropdown, edit_month_dropdown]
         )
         
-        # Month dropdown change - updates view AND edit choices
+        # Month dropdown change: Updates timeline view and edit options
         month_dropdown.change(
             update_month_view,
             inputs=[month_dropdown],
             outputs=[monthly_timeline_plot, label_chart_status, current_view_info_visible, edit_month_dropdown]
         )
         
-        # View navigation for the visible buttons
+        # --- TIMELINE VIEW NAVIGATION ---
+        # These buttons allow viewing different months while keeping labelling target separate
+        
+        # View navigation for the visible buttons (above timeline)
         view_back_btn_visible.click(
-            lambda month: app.navigate_view(month, "back"),
+            lambda month: app.navigate_view(month, "back"),  # Navigate view backward
             inputs=[month_dropdown],
             outputs=[monthly_timeline_plot, label_chart_status, current_view_info_visible]
         )
         
         view_forward_btn_visible.click(
-            lambda month: app.navigate_view(month, "forward"),
+            lambda month: app.navigate_view(month, "forward"),  # Navigate view forward
             inputs=[month_dropdown],
             outputs=[monthly_timeline_plot, label_chart_status, current_view_info_visible]
         )
         
+        # Hidden button event handlers (needed for internal state management)
         view_back_btn.click(
             lambda month: app.navigate_view(month, "back"),
             inputs=[month_dropdown],
@@ -657,8 +792,11 @@ def create_interface():
             outputs=[monthly_timeline_plot, label_chart_status, current_view_info]
         )
         
-        # Label management
+        # --- LABEL MANAGEMENT FUNCTIONS ---
+        # These functions handle saving, clearing, and editing flare labels
+        
         def save_label_and_refresh(month, evidence, categories, reason):
+            """Save monthly flare label and refresh timeline visualization"""
             status, labels_info = app.save_monthly_label(month, evidence, categories, reason)
             # Refresh the timeline to show new flare highlighting
             if month:
@@ -668,6 +806,7 @@ def create_interface():
             return status, labels_info, None, gr.update(choices=[])
         
         def clear_label_and_refresh(month):
+            """Clear monthly flare label and refresh timeline visualization"""
             status, labels_info = app.clear_monthly_label(month)
             # Refresh the timeline to remove flare highlighting
             if month:
@@ -676,47 +815,58 @@ def create_interface():
                 return status, labels_info, fig, gr.update(choices=edit_choices)
             return status, labels_info, None, gr.update(choices=[])
         
+        # Save label button: Saves current month's flare label
         save_label_btn.click(
             save_label_and_refresh,
             inputs=[month_dropdown, flare_evidence, category_dropdown_label, reason_input_label],
             outputs=[label_chart_status, labels_info, monthly_timeline_plot, edit_month_dropdown]
         )
         
+        # Clear label button: Removes current month's flare label
         clear_label_btn.click(
             clear_label_and_refresh,
             inputs=[month_dropdown],
             outputs=[label_chart_status, labels_info, monthly_timeline_plot, edit_month_dropdown]
         )
         
-        # Edit functionality
+        # --- EDIT EXISTING LABELS ---
+        
+        # Load existing label for editing: Populates form with existing label data
         load_edit_btn.click(
-            app.load_label_for_edit,
-            inputs=[edit_month_dropdown],
+            app.load_label_for_edit,  # App method that loads existing label data
+            inputs=[edit_month_dropdown],  # Month to edit
             outputs=[flare_evidence, category_dropdown_label, reason_input_label, label_chart_status]
         )
         
+        # Delete label button: Removes existing label completely
         delete_label_btn.click(
-            app.delete_monthly_label,
+            app.delete_monthly_label,  # App method that deletes the label
             inputs=[edit_month_dropdown],
             outputs=[label_chart_status, labels_info]
         ).then(
+            # Chain: After deletion, refresh the timeline view
             lambda month: app.update_monthly_view(month, app.current_view_offset) if month else (None, "No month selected", ""),
             inputs=[month_dropdown],
             outputs=[monthly_timeline_plot, label_chart_status, current_view_info_visible]
         ).then(
+            # Chain: Update the edit dropdown choices (remove deleted month)
             lambda: gr.update(choices=app.get_monthly_labels_list()),
             outputs=[edit_month_dropdown]
         )
     
     return demo
 
+# ============================================================================
+# MAIN EXECUTION
+# ============================================================================
 if __name__ == "__main__":
-    # Create app with command line arguments
+    # Create app instance with command line arguments
     app = create_app_with_args()
     
-    # Add monthly labelling methods to the app
+    # Add monthly labelling methods to the app class
+    # (This extends the PatientTimelineApp class with additional methods)
     add_monthly_labelling_methods(PatientTimelineApp)
     
-    # Create and launch the interface
+    # Create and launch the Gradio web interface
     demo = create_interface()
-    demo.launch()
+    demo.launch()  # By default launches on localhost:7860
