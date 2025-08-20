@@ -4,7 +4,6 @@
 
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![Gradio](https://img.shields.io/badge/interface-gradio-orange.svg)](https://gradio.app/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## 📋 Table of Contents
 
@@ -49,7 +48,7 @@ The **Patient Timeline Viewer** is a sophisticated web application designed spec
 - **Gantt-style charts** showing events over time
 - **Hover tooltips** with detailed event information
 - **Zoom and pan** capabilities for detailed exploration
-- **Color-coded events** by medical category
+- **Colour-coded events** by medical category
 - **Smart lab test spacing** for same-day multiple tests
 
 ### Advanced Flare Labeling
@@ -190,7 +189,7 @@ python main.py admin
 
 The application looks for data in:
 ```
-/data/external_ps/baumgart/BAUMGART_SHARED/Baumgart_IBD/Sacha/ibd_activity_viewer/data/
+/data/external_ps/baumgart/BAUMGART_SHARED/Baumgart_IBD/Sacha/ibd_activity_viewer
 ```
 
 #### 2. **Expected File**
@@ -316,11 +315,11 @@ timeline_visualization.py
 ```
 ┌─────────────────┬─────────────────────────────────────────┐
 │  Patient        │  Timeline Chart                         │
-│  Selection      │  ┌─────────────────────────────────────┐ │
-│  ┌───────────┐  │  │        Interactive Timeline         │ │
-│  │Patient ID │  │  │                                     │ │
-│  └───────────┘  │  │  [IBD Filter] [Refresh Chart]       │ │
-│  [Load Button]  │  └─────────────────────────────────────┘ │
+│  Selection      │  ┌─────────────────────────────────────┐│
+│  ┌───────────┐  │  │        Interactive Timeline         ││
+│  │Patient ID │  │  │                                     ││
+│  └───────────┘  │  │  [IBD Filter] [Refresh Chart]       ││
+│  [Load Button]  │  └───────────────────────────────────── │
 └─────────────────┴─────────────────────────────────────────┘
 ```
 
@@ -345,14 +344,14 @@ timeline_visualization.py
 ```
 ┌─────────────────┬─────────────────────────────────────────┐
 │  Controls       │  Monthly Timeline                       │
-│  ┌───────────┐  │  ┌─────────────────────────────────────┐ │
-│  │Patient ID │  │  │  [◀ Prev] [Next ▶]                  │ │
-│  └───────────┘  │  │                                     │ │
-│                 │  │      Monthly View Timeline          │ │
-│  ┌───────────┐  │  │                                     │ │
-│  │Month      │  │  │                                     │ │
-│  │Selection  │  │  │                                     │ │
-│  └───────────┘  │  └─────────────────────────────────────┘ │
+│  ┌───────────┐  │  ┌─────────────────────────────────────┐│
+│  │Patient ID │  │  │  [◀ Prev] [Next ▶]                  ││
+│  └───────────┘  │  │                                     ││
+│                 │  │      Monthly View Timeline          ││
+│  ┌───────────┐  │  │                                     ││
+│  │Month      │  │  │                                     ││
+│  │Selection  │  │  │                                     ││
+│  └───────────┘  │  └─────────────────────────────────────┘│
 │                 │                                         │
 │  Flare Labels   │                                         │
 │  ┌───────────┐  │                                         │
@@ -366,7 +365,7 @@ timeline_visualization.py
 **Workflow**:
 1. **Load Patient**: Select patient for labeling
 2. **Choose Month**: Navigate to specific month
-3. **View Timeline**: See events for that month
+3. **View Timeline**: See events for that month or other months for context 
 4. **Label Flare**: Mark evidence and categories
 5. **Save Label**: Store annotation permanently
 
@@ -436,7 +435,7 @@ python main.py admin
 ```
 ibd-data-labelling-webapp
 ├── main.py                     # Application entry point & UI
-├── patient_timeline_webapp.py     # Core application logic
+├── patient_timeline_webapp.py  # Core application logic
 ├── monthly_labelling.py        # Flare labeling functionality
 ├── timeline_visualization.py   # Chart creation & visualization
 ├── README.md                   # This documentation
@@ -823,25 +822,6 @@ For new features, please describe:
 3. **Alternative approaches** considered
 4. **Impact on existing** functionality
 
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-### MIT License Summary
-
-**You are free to**:
-- ✅ Use the software for any purpose
-- ✅ Modify and distribute the software
-- ✅ Include in commercial products
-- ✅ Grant sublicenses to others
-
-**You must**:
-- Include the original copyright notice
-- Include the license text in distributions
-
-**You cannot**:
-- ❌ Hold the authors liable for damages
-- ❌ Remove copyright notices
 
 ---
 
