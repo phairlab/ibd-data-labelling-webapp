@@ -1,0 +1,32 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+
+# Virtual environment
+timeline2/
+
+# Gradio config directory (if temporary files)
+.gradio/
+
+# Environment variables
+*.env
+
+# Jupyter Notebook checkpoints (if you use notebooks)
+.ipynb_checkpoints/
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Build and distribution folders (typically for packaging)
+build/
+dist/
+*.egg-info/
+
+
+
+__pycache__/
+.gradio/
