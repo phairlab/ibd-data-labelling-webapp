@@ -6,6 +6,81 @@ import textwrap
 from monthly_labelling import load_monthly_labels
 
 
+def get_fixed_event_order():
+    """
+    Get the fixed order for event types on the y-axis.
+    
+    This ensures consistent ordering across all patients and views.
+    Order from top to bottom:
+    1. Imaging (top)
+    2. Prescription
+    3. Ambulatory Visit
+    4. Physician Claim
+    5. Hospital Admission
+    6. Lab Test (bottom)
+    
+    Returns:
+        list: Event types in the order they should appear (top to bottom)
+    """
+    return [
+        'imaging',
+        'prescription',
+        'ambulatory_visit',
+        'physician_claim',
+        'hospital_admission',
+        'lab_test'
+    ]
+
+def ensure_all_event_types(data):
+    """
+    Ensure all event types are present in the data for consistent y-axis.
+    
+    This function adds dummy (invisible) entries for any missing event types
+    to maintain consistent y-axis ordering across all patients.
+    
+    Args:
+        data (pd.DataFrame): Event data
+        
+    Returns:
+        pd.DataFrame: Data with all event types present (real or dummy)
+    """
+    fixed_order = get_fixed_event_order()
+    existing_types = data['event_type'].unique()
+    
+    # Find missing event types
+    missing_types = [et for et in fixed_order if et not in existing_types]
+    
+    if missing_types:
+        # Create dummy entries for missing types
+        dummy_rows = []
+        # Use the earliest date from the data for dummy entries
+        dummy_date = data['start_date'].min() if not data.empty else pd.Timestamp.now()
+        
+        for event_type in missing_types:
+            dummy_rows.append({
+                'start_date': dummy_date,
+                'end_date': dummy_date,  # Same date = invisible
+                'event_type': event_type,
+                'patient_id': data['patient_id'].iloc[0] if not data.empty else 0,
+                'ibd_related': False,
+                'is_dummy': True,
+                'event_info': json.dumps({'dummy': True})
+            })
+        
+        # Add dummy rows to data
+        dummy_df = pd.DataFrame(dummy_rows)
+        data = pd.concat([data, dummy_df], ignore_index=True)
+    
+    # Mark real data
+    if 'is_dummy' not in data.columns:
+        data['is_dummy'] = False
+    
+    return data
+
+
+
+
+
 def get_label_mapping():
     """
     Get the label mapping dictionary for converting internal event names to display names.
@@ -57,6 +132,9 @@ def create_hover_data(data):
         try:
             # === Process Each Row ===
             for idx, row in data.iterrows():
+                if row.get('is_dummy', False):
+                    hover_data.append("")
+                    continue
                 try:
                     # === Parse JSON Event Info ===
                     # Handle both string JSON and already-parsed dict objects
@@ -68,6 +146,8 @@ def create_hover_data(data):
                     
                     # === Add Event Info Details ===
                     for key, value in info.items():
+                        if key == 'dummy':
+                            continue
                         if isinstance(value, str) and len(str(value)) > 40:
                             # Wrap long text values to prevent wide hover boxes
                             wrapped_value = "<br>".join(textwrap.wrap(str(value), width=40))
@@ -126,7 +206,7 @@ def process_lab_test_data(data):
         3. For groups with multiple tests, add 2-hour incremental offsets
         4. Modify both start_date and end_date consistently
     """
-    lab_data = data[data['event_type'] == 'lab_test'].copy()
+    lab_data = data[(data['event_type'] == 'lab_test') & (data.get('is_dummy', False) == False)].copy()
     if not lab_data.empty:
         # === Group Lab Tests by Date ===
         # Create date-only column for grouping (ignoring time component)
@@ -166,7 +246,7 @@ def handle_same_day_events(data):
         with the time offset calculations.
     """
     # === Identify Same-Day Events ===
-    mask = data['start_date'] == data['end_date']
+    mask = (data['start_date'] == data['end_date']) & (data.get('is_dummy', False) == False)
     
     # === Extend End Date by 1 Day ===
     data.loc[mask, 'end_date'] += pd.Timedelta(days=1)
@@ -395,6 +475,7 @@ def create_main_timeline(app):
     
     # === Prepare Data Copy for Processing ===
     data = app.current_patient_data.copy()
+    data = ensure_all_event_types(data)
     
     # === Process Lab Tests ===
     # Handle multiple lab tests on same day with time offsets
@@ -407,6 +488,8 @@ def create_main_timeline(app):
     # === Create Hover Information ===
     # Parse event_info JSON and create formatted hover text
     hover_data = create_hover_data(data)
+    fixed_order = get_fixed_event_order()
+    label_mapping = get_label_mapping()
     
     # === Create Base Timeline Figure ===
     fig = px.timeline(
@@ -415,8 +498,10 @@ def create_main_timeline(app):
         x_end="end_date",
         y="event_type",
         color="event_type",
-        hover_name=None  # Disable default hover to use custom hover
+        hover_name=None,
+        category_orders={"event_type": fixed_order}  # *** ADD THIS LINE ***
     )
+    
     
     # === Update Traces with Custom Hover Info ===
     for i, trace in enumerate(fig.data):
@@ -424,21 +509,34 @@ def create_main_timeline(app):
         event_type = trace.name
         event_mask = data['event_type'] == event_type
         trace_hover_data = [hover_data[j] for j, mask_val in enumerate(event_mask) if mask_val]
+
+        trace_data = data[event_mask]
+        is_all_dummy = trace_data.get('is_dummy', False).all() if not trace_data.empty else False
+
         
-        # === Apply Custom Styling ===
-        trace.update(
-            hovertemplate='%{hovertext}<extra></extra>',
-            hovertext=trace_hover_data,
-            width=0.9,  # Make bars thicker for better visibility
-        )
+        if is_all_dummy:
+            # *** ADD THIS BLOCK - make dummy traces invisible ***
+            trace.update(
+                hovertemplate='<extra></extra>',
+                hovertext=[],
+                width=0,
+                opacity=0,
+                showlegend=False
+            )
+        else:
+            trace.update(
+                hovertemplate='%{hovertext}<extra></extra>',
+                hovertext=trace_hover_data,
+                width=0.9,
+            )
     
     # === Create Custom Y-Axis Labels ===
-    unique_event_types = data['event_type'].unique()
+    # unique_event_types = data['event_type'].unique()
     label_mapping = get_label_mapping()
     
     # Convert internal event names to readable display names
     custom_labels = [label_mapping.get(event_type, event_type.replace('_', ' ').title()) 
-                    for event_type in unique_event_types]
+                    for event_type in fixed_order]
     
     # === Update Layout with Comprehensive Settings ===
     fig.update_layout(
@@ -460,7 +558,10 @@ def create_main_timeline(app):
         hovermode='closest',
         yaxis=dict(
             ticktext=custom_labels,
-            tickvals=list(unique_event_types)
+            tickvals=fixed_order,
+            categoryorder='array',
+            categoryarray=fixed_order,
+            range=[-0.75, len(fixed_order) + 0.06]
         )
     )
     
@@ -522,17 +623,20 @@ def create_monthly_timeline(app, selected_month, view_offset=0):
         
         # === Ensure Consistent Y-Axis Across All Months ===
         # Always show all event types even if not present in this month
-        all_event_types = ['ambulatory_visit', 'lab_test', 'prescription', 'physician_claim', 'hospital_admission', 'imaging']
+        fixed_order = get_fixed_event_order()
         
         # === Create Dummy Data for Missing Event Types ===
         dummy_data = []
-        for event_type in all_event_types:
+        for event_type in fixed_order:
             if event_type not in filtered_data['event_type'].values:
                 dummy_data.append({
                     'start_date': start_date,
-                    'end_date': start_date,  # Zero-width invisible bar
+                    'end_date': start_date,
                     'event_type': event_type,
-                    'is_dummy': True
+                    'is_dummy': True,
+                    'patient_id': app.current_patient_id,
+                    'ibd_related': False,
+                    'event_info': json.dumps({'dummy': True})
                 })
         
         # === Combine Real and Dummy Data ===
@@ -610,7 +714,8 @@ def create_monthly_timeline(app, selected_month, view_offset=0):
             x_end="end_date",
             y="event_type",
             color="event_type",
-            hover_name=None
+            hover_name=None,
+            category_orders={"event_type": fixed_order} 
         )
         
         # === Update Traces - Handle Dummy vs Real Data ===
@@ -644,7 +749,7 @@ def create_monthly_timeline(app, selected_month, view_offset=0):
         # === Create Custom Labels for Consistent Y-Axis ===
         label_mapping = get_label_mapping()
         all_custom_labels = [label_mapping.get(event_type, event_type.replace('_', ' ').title()) 
-                           for event_type in all_event_types]
+                           for event_type in fixed_order]
         
         # === Update Layout for Monthly View ===
         fig.update_layout(
@@ -666,9 +771,9 @@ def create_monthly_timeline(app, selected_month, view_offset=0):
             hovermode='closest',
             yaxis=dict(
                 ticktext=all_custom_labels,
-                tickvals=all_event_types,
+                tickvals=fixed_order, 
                 categoryorder='array',
-                categoryarray=all_event_types
+                categoryarray=fixed_order 
             )
         )
         
