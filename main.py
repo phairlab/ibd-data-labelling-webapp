@@ -726,41 +726,44 @@ def create_interface():
             """Navigate to previous month in labelling dropdown"""
             new_month = app.navigate_month(month, "back")
             edit_choices = app.get_monthly_labels_list()  # Update edit dropdown
-            return new_month, gr.update(choices=edit_choices)
+            # Reset form when changing labeling month
+            return new_month, gr.update(choices=edit_choices), "No", [], ""
         
         def navigate_month_forward(month):
             """Navigate to next month in labelling dropdown"""
             new_month = app.navigate_month(month, "forward")
             edit_choices = app.get_monthly_labels_list()  # Update edit dropdown
-            return new_month, gr.update(choices=edit_choices)
-        
+            # Reset form when changing labeling month
+            return new_month, gr.update(choices=edit_choices), "No", [], ""        
         def update_month_view(month):
             """Update monthly timeline view when month selection changes"""
             app.current_view_offset = 0  # Reset view offset to show selected month
             if month:
                 fig, status, view_info = app.update_monthly_view(month, 0)
                 edit_choices = app.get_monthly_labels_list()
-                return fig, status, view_info, gr.update(choices=edit_choices)
-            return None, "No month selected", "", gr.update(choices=[])
+                return fig, status, view_info, gr.update(choices=edit_choices), "No", [], ""
+            return None, "No month selected", "", gr.update(choices=[]), "No", [], ""
         
         # Month navigation button event handlers
         month_back_btn.click(
             navigate_month_back,
             inputs=[month_dropdown],
-            outputs=[month_dropdown, edit_month_dropdown]
+            outputs=[month_dropdown, edit_month_dropdown, flare_evidence, category_dropdown_label, reason_input_label]
         )
         
         month_forward_btn.click(
             navigate_month_forward,
             inputs=[month_dropdown],
-            outputs=[month_dropdown, edit_month_dropdown]
+            outputs=[month_dropdown, edit_month_dropdown, flare_evidence, category_dropdown_label, reason_input_label]
+
         )
         
         # Month dropdown change: Updates timeline view and edit options
         month_dropdown.change(
             update_month_view,
             inputs=[month_dropdown],
-            outputs=[monthly_timeline_plot, label_chart_status, current_view_info_visible, edit_month_dropdown]
+            outputs=[monthly_timeline_plot, label_chart_status, current_view_info, edit_month_dropdown, 
+             flare_evidence, category_dropdown_label, reason_input_label]
         )
         
         # --- TIMELINE VIEW NAVIGATION ---
@@ -796,10 +799,10 @@ def create_interface():
         # These functions handle saving, clearing, and editing flare labels
         
         def save_label_and_refresh(month, evidence, categories, reason):
-            """Save monthly flare label and refresh timeline visualization"""
             status, labels_info = app.save_monthly_label(month, evidence, categories, reason)
             # Refresh the timeline to show new flare highlighting
             if month:
+                # Use the existing update_monthly_view method instead
                 fig, chart_status, view_info = app.update_monthly_view(month, app.current_view_offset)
                 edit_choices = app.get_monthly_labels_list()
                 return status, labels_info, fig, gr.update(choices=edit_choices)

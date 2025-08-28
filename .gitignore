@@ -11,9 +11,6 @@ timeline2/
 # Environment variables
 *.env
 
-# Jupyter Notebook checkpoints (if you use notebooks)
-.ipynb_checkpoints/
-
 # OS-specific files
 .DS_Store
 Thumbs.db
@@ -27,6 +24,6 @@ dist/
 *.egg-info/
 
 
-
-__pycache__/
-.gradio/
+.venv/
+*.pyc
+.python-version

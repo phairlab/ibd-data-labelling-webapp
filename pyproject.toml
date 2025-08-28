@@ -1,0 +1,20 @@
+[project]
+name = "ibd-timeline-webapp"
+version = "1.0.0"
+description = "Patient Timeline Viewer for IBD Data Labelling"
+requires-python = ">=3.11,<3.14"
+dependencies = [
+    "gradio>=5.35.0",
+    "pandas>=2.3.0",
+    "plotly>=6.1.2",
+    "numpy>=2.2.0",
+    "openpyxl>=3.1.5",
+    "python-dateutil>=2.9.0",
+]
+
+
+[tool.uv]
+# No dev dependencies needed for production webapp
+
+[tool.uv.pip]
+index-url = "https://pypi.org/simple"

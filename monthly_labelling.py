@@ -29,6 +29,84 @@ import pandas as pd
 import json
 import os
 
+# ============================================================================
+# NEW HELPER FUNCTION TO GET GROUP-SPECIFIC SAVE DIRECTORY
+# ============================================================================
+def get_save_directory(app):
+    """
+    Get the appropriate save directory based on the user's group.
+    Creates the directory if it doesn't exist.
+    
+    Args:
+        app: PatientTimelineApp instance with group_name attribute
+    
+    Returns:
+        str: Path to the appropriate save directory
+    """
+    # Base directory where all flare data should be saved
+    base_dir = "/data/baumgart/BAUMGART_SHARED/Baumgart_IBD/Mia/ibd-data-labelling-webapp"
+    
+    # Map group names to folder names
+    group_folder_mapping = {
+        "Group A": "groupa_saved_flares",
+        "Group B": "groupb_saved_flares", 
+        "Group C": "groupc_saved_flares",
+        "Admin (All Patients)": "admin_saved_flares",
+        "Development Mode": "dev_saved_flares"
+    }
+    
+    # Handle custom groups
+    if app.group_name not in group_folder_mapping:
+        # For custom groups, create a folder based on the sanitized group name
+        folder_name = app.group_name.lower().replace(" ", "_").replace("(", "").replace(")", "") + "_saved_flares"
+    else:
+        folder_name = group_folder_mapping[app.group_name]
+    
+    # Create the full path
+    full_path = os.path.join(base_dir, folder_name)
+    
+    # Create the directory if it doesn't exist
+    try:
+        if not os.path.exists(full_path):
+            # Create directory with group write permissions
+            os.makedirs(full_path, mode=0o775, exist_ok=True)
+            print(f"Created save directory: {full_path}")
+            
+            # Change group ownership to 'baumgart'
+            import grp
+            import pwd
+            try:
+                # Get group ID for 'baumgart'
+                group_info = grp.getgrnam('baumgart')
+                # Keep current user as owner, change group to 'baumgart'
+                os.chown(full_path, -1, group_info.gr_gid)
+                # Set group sticky bit so files inherit group
+                os.chmod(full_path, 0o2775)  # 2775 = rwxrwsr-x
+                print(f"Set group ownership to 'baumgart' with sticky bit")
+            except Exception as e:
+                print(f"Warning: Could not set group ownership: {e}")
+        else:
+            print(f"Using existing save directory: {full_path}")
+        return full_path
+    except PermissionError as e:
+        print(f"ERROR: Permission denied creating directory {full_path}")
+        print(f"Error details: {e}")
+        print(f"Please ensure you have write permissions to: {base_dir}")
+        # Fall back to current directory as last resort
+        print(f"Falling back to current directory subfolder: {folder_name}")
+        if not os.path.exists(folder_name):
+            os.makedirs(folder_name, exist_ok=True)
+        return folder_name
+    except Exception as e:
+        print(f"ERROR: Unexpected error creating directory {full_path}")
+        print(f"Error details: {e}")
+        # Fall back to current directory as last resort
+        print(f"Falling back to current directory subfolder: {folder_name}")
+        if not os.path.exists(folder_name):
+            os.makedirs(folder_name, exist_ok=True)
+        return folder_name
+
+
 
 def save_monthly_label(app, selected_month, evidence, categories, reason):
     """
@@ -67,19 +145,32 @@ def save_monthly_label(app, selected_month, evidence, categories, reason):
 
         # DEBUG: Print current working directory and file path
         import os
-        cwd = os.getcwd()
-        save_file = f'patient_{self.current_patient_id}_monthly_labels.json'
+        # ========== CHANGED: Get group-specific save directory ==========
+        save_dir = get_save_directory(app)
+        save_file = os.path.join(save_dir, f'patient_{app.current_patient_id}_monthly_labels.json')
         full_path = os.path.abspath(save_file)
         
+        print(f"\n{'='*50}")
         print(f"\n=== SAVE MONTHLY LABEL DEBUG ===")
-        print(f"Current Working Directory: {cwd}")
-        print(f"Save File Name: {save_file}")
+        print(f"{'='*50}")
+        print(f"Timestamp: {pd.Timestamp.now()}")
+        print(f"Current Patient ID: {app.current_patient_id}")
+        print(f"Group Name: {app.group_name}")  # Added group name to debug
+        print(f"Save Directory: {save_dir}")     # Added save directory to debug
+        print(f"Save File Name: {os.path.basename(save_file)}")
         print(f"Full Path: {full_path}")
-        print(f"Directory Writable: {os.access(cwd, os.W_OK)}")
+        print(f"Directory Exists: {os.path.exists(save_dir)}")
+        print(f"Directory Writable: {os.access(save_dir, os.W_OK)}")
         print(f"File Exists: {os.path.exists(save_file)}")
         if os.path.exists(save_file):
             print(f"File Writable: {os.access(save_file, os.W_OK)}")
+            print(f"File Size: {os.path.getsize(save_file)} bytes")
         print(f"User: {os.environ.get('USER', 'unknown')}")
+        print(f"\nData to save:")
+        print(f"  Month: {selected_month}")
+        print(f"  Evidence: {evidence}")
+        print(f"  Categories: {categories}")
+        print(f"  Reason: {reason}")
         print(f"================================\n")
         # Convert human-readable month (e.g., "January 2023") to pandas Period
         # This standardizes the date format for consistent storage
@@ -195,11 +286,15 @@ def load_monthly_labels(app):
         return {}
     
     # Generate filename based on current patient ID
-    # This ensures each patient's labels are stored separately
-    save_file = f'patient_{app.current_patient_id}_monthly_labels.json'
+    # ========== CHANGED: Get group-specific save directory ==========
+    save_dir = get_save_directory(app)
+    save_file = os.path.join(save_dir, f'patient_{app.current_patient_id}_monthly_labels.json')
     full_path = os.path.abspath(save_file)
 
     print(f"\n=== LOAD MONTHLY LABELS ===")
+    print(f"Looking for file: {full_path}")
+    print(f"Group Name: {app.group_name}")
+    print(f"Save Directory: {save_dir}")
     print(f"Looking for file: {full_path}")
     print(f"File exists: {os.path.exists(save_file)}")
     
@@ -238,98 +333,6 @@ def load_monthly_labels(app):
     # This line should never be reached, but just in case
     return {}
 
-#########
-def save_monthly_label(app, selected_month, evidence, categories, reason):
-    """
-    Save or update a monthly flare label for the current patient.
-    """
-    # Input validation - month must be selected
-    if not selected_month:
-        return "Please select a month", ""
-    
-    # Validation - if marking as flare, must specify categories
-    if evidence == "Yes" and not categories:
-        return "Please select at least one category when evidence is Yes", ""
-    
-    try:
-        # DEBUG: Print current working directory and file path
-        import os
-        cwd = os.getcwd()
-        save_file = f'patient_{app.current_patient_id}_monthly_labels.json'  # Fixed: use app not self
-        full_path = os.path.abspath(save_file)
-        
-        print(f"\n{'='*50}")
-        print(f"SAVE MONTHLY LABEL DEBUG")
-        print(f"{'='*50}")
-        print(f"Timestamp: {pd.Timestamp.now()}")
-        print(f"Current Patient ID: {app.current_patient_id}")
-        print(f"Current Working Directory: {cwd}")
-        print(f"Save File Name: {save_file}")
-        print(f"Full Path: {full_path}")
-        print(f"Directory Writable: {os.access(cwd, os.W_OK)}")
-        print(f"File Exists: {os.path.exists(save_file)}")
-        if os.path.exists(save_file):
-            print(f"File Writable: {os.access(save_file, os.W_OK)}")
-            print(f"File Size: {os.path.getsize(save_file)} bytes")
-        print(f"User: {os.environ.get('USER', 'unknown')}")
-        print(f"\nData to save:")
-        print(f"  Month: {selected_month}")
-        print(f"  Evidence: {evidence}")
-        print(f"  Categories: {categories}")
-        print(f"  Reason: {reason}")
-        print(f"{'='*50}\n")
-        
-        # Convert human-readable month to pandas Period
-        selected_period = pd.to_datetime(selected_month, format='%B %Y').to_period('M')
-        
-        # Map user-friendly category names to internal database format
-        label_to_internal = {
-            'Ambulatory Visit': 'ambulatory_visit',
-            'Lab Test': 'lab_test',
-            'Prescription': 'prescription',
-            'Physician Claim': 'physician_claim',
-            'Hospital Admission': 'hospital_admission',
-            'Imaging': 'imaging'
-        }
-        
-        # Convert selected categories to internal format
-        internal_categories = [
-            label_to_internal.get(cat, cat.lower().replace(' ', '_')) 
-            for cat in categories
-        ] if categories else []
-        
-        # Load existing labels for this patient (returns empty dict if none exist)
-        monthly_labels = load_monthly_labels(app)
-        
-        print(f"Existing labels count before save: {len(monthly_labels)}")
-        
-        # Create/update the label entry for this specific month
-        monthly_labels[str(selected_period)] = {
-            "evidence": evidence,
-            "categories": internal_categories,
-            "reason": reason or ""
-        }
-        
-        print(f"Labels count after update: {len(monthly_labels)}")
-        
-        # Persist the updated labels to file
-        save_monthly_labels(app, monthly_labels)
-        
-        # Generate updated summary text for UI display
-        labels_info = get_monthly_labels_info(app)
-        
-        # Return success message and updated labels summary
-        return f"Label saved for {selected_month}: Evidence={evidence}", labels_info
-        
-    except Exception as e:
-        print(f"\n{'!'*50}")
-        print(f"ERROR in save_monthly_label: {e}")
-        import traceback
-        traceback.print_exc()
-        print(f"{'!'*50}\n")
-        return f"Failed to save label: {str(e)}", ""
-
-
 def save_monthly_labels(app, labels):
     """
     Save monthly labels dictionary to JSON file for the current patient.
@@ -340,8 +343,9 @@ def save_monthly_labels(app, labels):
         return
     
     try:
-        # Generate patient-specific filename
-        save_file = f'patient_{app.current_patient_id}_monthly_labels.json'
+        # ========== CHANGED: Get group-specific save directory ==========
+        save_dir = get_save_directory(app)
+        save_file = os.path.join(save_dir, f'patient_{app.current_patient_id}_monthly_labels.json')
         full_path = os.path.abspath(save_file)
         
         print(f"\n{'='*50}")
@@ -349,6 +353,8 @@ def save_monthly_labels(app, labels):
         print(f"{'='*50}")
         print(f"Timestamp: {pd.Timestamp.now()}")
         print(f"Patient ID: {app.current_patient_id}")
+        print(f"Group Name: {app.group_name}")
+        print(f"Save Directory: {save_dir}")
         print(f"Save Path: {full_path}")
         print(f"Number of labels to save: {len(labels)}")
         print(f"Labels data: {json.dumps(labels, indent=2)}")
