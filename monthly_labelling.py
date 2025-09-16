@@ -44,7 +44,7 @@ def get_save_directory(app):
         str: Path to the appropriate save directory
     """
     # Base directory where all flare data should be saved
-    base_dir = "/data/baumgart/BAUMGART_SHARED/Baumgart_IBD/Mia/ibd-data-labelling-webapp"
+    base_dir = "/data/baumgart/BAUMGART_SHARED/Baumgart_IBD/Sacha/ibd-data-labelling-webapp"
     
     # Map group names to folder names
     group_folder_mapping = {

@@ -871,10 +871,38 @@ def create_interface():
     
     return demo
 
+
+def find_available_port(start_port=7860, max_attempts=10):
+    """
+    Find an available port starting from start_port.
+    
+    Args:
+        start_port (int): Starting port to check
+        max_attempts (int): Maximum number of ports to try
+    
+    Returns:
+        int: Available port number
+    """
+    import socket
+    
+    for port in range(start_port, start_port + max_attempts):
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.bind(('localhost', port))
+                return port
+        except OSError:
+            continue
+    
+    raise RuntimeError(f"No available port found in range {start_port}-{start_port + max_attempts}")
+
 # ============================================================================
 # MAIN EXECUTION
 # ============================================================================
 if __name__ == "__main__":
+    import threading
+    import time
+    import os
+    
     # Create app instance with command line arguments
     app = create_app_with_args()
     
@@ -884,4 +912,95 @@ if __name__ == "__main__":
     
     # Create and launch the Gradio web interface
     demo = create_interface()
-    demo.launch()  # By default launches on localhost:7860
+    
+    # Find available port and launch with port detection
+    try:
+        # Find an available port
+        available_port = find_available_port(7860)
+        
+        # Global variable to store server info
+        server_info = {
+            'port': available_port,
+            'host': '127.0.0.1',
+            'running': False,
+            'demo': demo
+        }
+        
+        def launch_server():
+            """Launch the Gradio server in a separate thread"""
+            try:
+                print(f"Starting server on port {available_port}...")
+                server_info['running'] = True
+                
+                # Launch with the available port
+                demo.launch(
+                    server_name="127.0.0.1",
+                    server_port=available_port,
+                    prevent_thread_lock=True,  # This is key - prevents blocking
+                    show_error=True,
+                    quiet=False
+                )
+                
+            except Exception as e:
+                print(f"Error in server thread: {e}")
+                server_info['running'] = False
+        
+        # Start server in background thread
+        server_thread = threading.Thread(target=launch_server, daemon=True)
+        server_thread.start()
+        
+        # Wait a moment for server to start
+        time.sleep(5)
+        
+        # Save port information to file
+        port_file_path = "/data/baumgart/BAUMGART_SHARED/Baumgart_IBD/Sacha/ibd-data-labelling-webapp/current_port.txt"
+        with open(port_file_path, 'w') as f:
+            f.write(f"HOST={server_info['host']}\n")
+            f.write(f"PORT={server_info['port']}\n")
+            f.write(f"URL=http://{server_info['host']}:{server_info['port']}\n")
+            f.write(f"GROUP={app.group_name}\n")
+        
+        print(f"Server launched successfully!")
+        print(f"Port: {server_info['port']}")
+        print(f"URL: http://{server_info['host']}:{server_info['port']}")
+        print(f"Port info saved to: {port_file_path}")
+        print("\n" + "="*60)
+        print("SERVER IS RUNNING")
+        print("="*60)
+        print("Press ENTER to stop the server and exit...")
+        print("Or press Ctrl+C to force quit")
+        
+        # Wait for user input to shut down
+        try:
+            input()  # Wait for user to press Enter
+        except KeyboardInterrupt:
+            print("\nReceived Ctrl+C, shutting down...")
+        
+        # Shutdown sequence
+        print("Shutting down server...")
+        
+        # Close the Gradio server
+        try:
+            if hasattr(demo, 'close'):
+                demo.close()
+            elif hasattr(demo, 'server') and demo.server:
+                demo.server.should_exit = True
+        except Exception as e:
+            print(f"Error during graceful shutdown: {e}")
+        
+        # Update port file to indicate server is stopped
+        with open(port_file_path, 'w') as f:
+            f.write("STATUS=STOPPED\n")
+            f.write(f"LAST_PORT={server_info['port']}\n")
+            f.write(f"STOPPED_AT={time.strftime('%Y-%m-%d %H:%M:%S')}\n")
+        
+        print("Server stopped successfully!")
+        
+    except Exception as e:
+        print(f"Error launching server: {e}")
+        # Save error info
+        port_file_path = "/data/baumgart/BAUMGART_SHARED/Baumgart_IBD/Sacha/ibd-data-labelling-webapp/current_port.txt"
+        with open(port_file_path, 'w') as f:
+            f.write("ERROR=Failed to launch server\n")
+            f.write(f"ERROR_MESSAGE={str(e)}\n")
+        raise
