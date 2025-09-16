@@ -65,7 +65,7 @@ def parse_arguments():
     custom.add_argument('--name', type=str, default='Custom', help='Group name for display')
     
     # ADMIN ACCESS: All patients (for administrators/supervisors)
-    admin = subparsers.add_parser('admin', help='Access all patients (admin mode)')
+    all = subparsers.add_parser('all', help='Access all patients')
     
     # DEVELOPMENT MODE: Sample data for testing/development
     dev = subparsers.add_parser('dev', help='Development mode with sample data')
@@ -94,9 +94,9 @@ def create_app_with_args():
         return PatientTimelineApp(patient_range=(args.start, args.end), group_name="Group C")
     elif args.command == 'custom':
         return PatientTimelineApp(patient_range=(args.start, args.end), group_name=args.name)
-    elif args.command == 'admin':
+    elif args.command == 'all':
         # Admin gets access to all patients (no range restriction)
-        return PatientTimelineApp(patient_range=None, group_name="Admin (All Patients)")
+        return PatientTimelineApp(patient_range=None, group_name="Labeler Patient Subset")
     elif args.command == 'dev':
         # Development mode creates app with sample data
         app = PatientTimelineApp(patient_range=None, group_name="Development Mode")
@@ -953,7 +953,7 @@ if __name__ == "__main__":
         time.sleep(5)
         
         # Save port information to file
-        port_file_path = "/data/baumgart/BAUMGART_SHARED/Baumgart_IBD/Sacha/ibd-data-labelling-webapp/current_port.txt"
+        port_file_path = "current_port.txt"
         with open(port_file_path, 'w') as f:
             f.write(f"HOST={server_info['host']}\n")
             f.write(f"PORT={server_info['port']}\n")
@@ -999,7 +999,7 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"Error launching server: {e}")
         # Save error info
-        port_file_path = "/data/baumgart/BAUMGART_SHARED/Baumgart_IBD/Sacha/ibd-data-labelling-webapp/current_port.txt"
+        port_file_path = "current_port.txt"
         with open(port_file_path, 'w') as f:
             f.write("ERROR=Failed to launch server\n")
             f.write(f"ERROR_MESSAGE={str(e)}\n")

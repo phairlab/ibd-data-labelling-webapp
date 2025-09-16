@@ -44,14 +44,15 @@ def get_save_directory(app):
         str: Path to the appropriate save directory
     """
     # Base directory where all flare data should be saved
-    base_dir = "/data/baumgart/BAUMGART_SHARED/Baumgart_IBD/Sacha/ibd-data-labelling-webapp"
+    # base_dir = "/data/baumgart/BAUMGART_SHARED/Baumgart_IBD/Sacha/ibd-data-labelling-webapp"
+    base_dir = ""
     
     # Map group names to folder names
     group_folder_mapping = {
         "Group A": "groupa_saved_flares",
         "Group B": "groupb_saved_flares", 
         "Group C": "groupc_saved_flares",
-        "Admin (All Patients)": "admin_saved_flares",
+        "Labeler Patient Subset": "labeler_saved_flares",
         "Development Mode": "dev_saved_flares"
     }
     
@@ -60,7 +61,8 @@ def get_save_directory(app):
         # For custom groups, create a folder based on the sanitized group name
         folder_name = app.group_name.lower().replace(" ", "_").replace("(", "").replace(")", "") + "_saved_flares"
     else:
-        folder_name = group_folder_mapping[app.group_name]
+        # folder_name = group_folder_mapping[app.group_name]
+        folder_name = "patient_labels"
     
     # Create the full path
     full_path = os.path.join(base_dir, folder_name)
@@ -306,28 +308,28 @@ def load_monthly_labels(app):
                 data = json.load(f)
             
             # Now that we have data, let's print debug info
-            print(f"Type of data: {type(data)}")
-            print(f"Loaded {len(data)} monthly labels successfully")
+            print(f"\rType of data: {type(data)}")
+            print(f"\rLoaded {len(data)} monthly labels successfully")
             
             if data:
-                print(f"Label months: {list(data.keys())}")
+                print(f"\rLabel months: {list(data.keys())}")
                 # Show first label as example
                 first_key = list(data.keys())[0]
-                print(f"Example label ({first_key}): {data[first_key]}")
+                print(f"\rExample label ({first_key}): {data[first_key]}")
             
-            print("============================\n")
+            print("\r============================\n")
             return data
             
         except Exception as e:
             # Handle file corruption, permission errors, etc.
-            print(f"Error loading monthly labels: {e}")
+            print(f"\rError loading monthly labels: {e}")
             import traceback
             traceback.print_exc()
             print("============================\n")
             return {}
     else:
-        print("No saved monthly labels file found (this is normal for new patients)")
-        print("============================\n")
+        print("\rNo saved monthly labels file found (this is normal for new patients)")
+        print("\r============================\n")
         return {}
     
     # This line should never be reached, but just in case
@@ -387,7 +389,7 @@ def save_monthly_labels(app, labels):
 
 def get_monthly_labels_info(app):
     """
-    Generate a formatted string summary of all monthly labels for display.
+    Generate a formatted string summary of all monthly labels for display.git 
     
     This function creates a human-readable summary of all saved flare labels
     for the current patient. It's used to populate the "Saved Labels" text

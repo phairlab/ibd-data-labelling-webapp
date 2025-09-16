@@ -1,4 +1,8 @@
 import pandas as pd
+
+import warnings
+warnings.filterwarnings("ignore", message="Discarding nonzero nanoseconds in conversion.", category=UserWarning)
+
 import plotly.express as px
 import plotly.graph_objects as go
 import json
@@ -79,8 +83,8 @@ class PatientTimelineApp:
         try:
             # === Define Data Location ===
             # Set the repository path and data directory
-            repo_path = '/data/external_ps/baumgart/BAUMGART_SHARED/Baumgart_IBD/Sacha/ibd_activity_viewer'
-            data_dir = os.path.join(repo_path, 'data')
+            # repo_path = '/data/external_ps/baumgart/BAUMGART_SHARED/Baumgart_IBD/Sacha/ibd_activity_viewer'
+            data_dir =  "patient_data" # os.path.join(repo_path, 'data')
             
             # Specific file to load (can be modified to load different files)
             target_file = 'selected_events_mia_patients.csv'
