@@ -72,7 +72,7 @@ def get_save_directory(app):
         if not os.path.exists(full_path):
             # Create directory with group write permissions
             os.makedirs(full_path, mode=0o775, exist_ok=True)
-            print(f"Created save directory: {full_path}")
+            print(f"\rCreated save directory: {full_path}")
             
             # Change group ownership to 'baumgart'
             import grp
@@ -84,26 +84,26 @@ def get_save_directory(app):
                 os.chown(full_path, -1, group_info.gr_gid)
                 # Set group sticky bit so files inherit group
                 os.chmod(full_path, 0o2775)  # 2775 = rwxrwsr-x
-                print(f"Set group ownership to 'baumgart' with sticky bit")
+                print(f"\rSet group ownership to 'baumgart' with sticky bit")
             except Exception as e:
-                print(f"Warning: Could not set group ownership: {e}")
+                print(f"\rWarning: Could not set group ownership: {e}")
         else:
-            print(f"Using existing save directory: {full_path}")
+            print(f"\rUsing existing save directory: {full_path}")
         return full_path
     except PermissionError as e:
-        print(f"ERROR: Permission denied creating directory {full_path}")
-        print(f"Error details: {e}")
-        print(f"Please ensure you have write permissions to: {base_dir}")
+        print(f"\rERROR: Permission denied creating directory {full_path}")
+        print(f"\rError details: {e}")
+        print(f"\rPlease ensure you have write permissions to: {base_dir}")
         # Fall back to current directory as last resort
-        print(f"Falling back to current directory subfolder: {folder_name}")
+        print(f"\rFalling back to current directory subfolder: {folder_name}")
         if not os.path.exists(folder_name):
             os.makedirs(folder_name, exist_ok=True)
         return folder_name
     except Exception as e:
-        print(f"ERROR: Unexpected error creating directory {full_path}")
-        print(f"Error details: {e}")
+        print(f"\rERROR: Unexpected error creating directory {full_path}")
+        print(f"\rError details: {e}")
         # Fall back to current directory as last resort
-        print(f"Falling back to current directory subfolder: {folder_name}")
+        print(f"\rFalling back to current directory subfolder: {folder_name}")
         if not os.path.exists(folder_name):
             os.makedirs(folder_name, exist_ok=True)
         return folder_name
@@ -152,28 +152,28 @@ def save_monthly_label(app, selected_month, evidence, categories, reason):
         save_file = os.path.join(save_dir, f'patient_{app.current_patient_id}_monthly_labels.json')
         full_path = os.path.abspath(save_file)
         
-        print(f"\n{'='*50}")
-        print(f"\n=== SAVE MONTHLY LABEL DEBUG ===")
-        print(f"{'='*50}")
-        print(f"Timestamp: {pd.Timestamp.now()}")
-        print(f"Current Patient ID: {app.current_patient_id}")
-        print(f"Group Name: {app.group_name}")  # Added group name to debug
-        print(f"Save Directory: {save_dir}")     # Added save directory to debug
-        print(f"Save File Name: {os.path.basename(save_file)}")
-        print(f"Full Path: {full_path}")
-        print(f"Directory Exists: {os.path.exists(save_dir)}")
-        print(f"Directory Writable: {os.access(save_dir, os.W_OK)}")
-        print(f"File Exists: {os.path.exists(save_file)}")
+        print(f"\r\n{'='*50}")
+        print(f"\r\n=== SAVE MONTHLY LABEL DEBUG ===")
+        print(f"\r{'='*50}")
+        print(f"\rTimestamp: {pd.Timestamp.now()}")
+        print(f"\rCurrent Patient ID: {app.current_patient_id}")
+        print(f"\rGroup Name: {app.group_name}")  # Added group name to debug
+        print(f"\rSave Directory: {save_dir}")     # Added save directory to debug
+        print(f"\rSave File Name: {os.path.basename(save_file)}")
+        print(f"\rFull Path: {full_path}")
+        print(f"\rDirectory Exists: {os.path.exists(save_dir)}")
+        print(f"\rDirectory Writable: {os.access(save_dir, os.W_OK)}")
+        print(f"\rFile Exists: {os.path.exists(save_file)}")
         if os.path.exists(save_file):
-            print(f"File Writable: {os.access(save_file, os.W_OK)}")
-            print(f"File Size: {os.path.getsize(save_file)} bytes")
-        print(f"User: {os.environ.get('USER', 'unknown')}")
-        print(f"\nData to save:")
-        print(f"  Month: {selected_month}")
-        print(f"  Evidence: {evidence}")
-        print(f"  Categories: {categories}")
-        print(f"  Reason: {reason}")
-        print(f"================================\n")
+            print(f"\rFile Writable: {os.access(save_file, os.W_OK)}")
+            print(f"\rFile Size: {os.path.getsize(save_file)} bytes")
+        print(f"\rUser: {os.environ.get('USER', 'unknown')}")
+        print(f"\r\nData to save:")
+        print(f"\r  Month: {selected_month}")
+        print(f"\r  Evidence: {evidence}")
+        print(f"\r  Categories: {categories}")
+        print(f"\r  Reason: {reason}")
+        print(f"\r================================\n")
         # Convert human-readable month (e.g., "January 2023") to pandas Period
         # This standardizes the date format for consistent storage
         selected_period = pd.to_datetime(selected_month, format='%B %Y').to_period('M')
@@ -284,7 +284,7 @@ def load_monthly_labels(app):
     """
     # Safety check - ensure we have a current patient loaded
     if app.current_patient_id is None:
-        print("WARNING: No patient ID set for loading labels")
+        print("\rWARNING: No patient ID set for loading labels")
         return {}
     
     # Generate filename based on current patient ID
@@ -293,12 +293,12 @@ def load_monthly_labels(app):
     save_file = os.path.join(save_dir, f'patient_{app.current_patient_id}_monthly_labels.json')
     full_path = os.path.abspath(save_file)
 
-    print(f"\n=== LOAD MONTHLY LABELS ===")
-    print(f"Looking for file: {full_path}")
-    print(f"Group Name: {app.group_name}")
-    print(f"Save Directory: {save_dir}")
-    print(f"Looking for file: {full_path}")
-    print(f"File exists: {os.path.exists(save_file)}")
+    print(f"\r\n=== LOAD MONTHLY LABELS ===")
+    print(f"\rLooking for file: {full_path}")
+    print(f"\rGroup Name: {app.group_name}")
+    print(f"\rSave Directory: {save_dir}")
+    print(f"\rLooking for file: {full_path}")
+    print(f"\rFile exists: {os.path.exists(save_file)}")
     
     # Check if labels file exists for this patient
     if os.path.exists(save_file):
@@ -341,7 +341,7 @@ def save_monthly_labels(app, labels):
     """
     # Safety check - ensure we have a current patient
     if app.current_patient_id is None:
-        print("ERROR: No patient ID set - cannot save")
+        print("\rERROR: No patient ID set - cannot save")
         return
     
     try:
@@ -350,16 +350,16 @@ def save_monthly_labels(app, labels):
         save_file = os.path.join(save_dir, f'patient_{app.current_patient_id}_monthly_labels.json')
         full_path = os.path.abspath(save_file)
         
-        print(f"\n{'='*50}")
-        print(f"SAVE MONTHLY LABELS TO FILE")
-        print(f"{'='*50}")
-        print(f"Timestamp: {pd.Timestamp.now()}")
-        print(f"Patient ID: {app.current_patient_id}")
-        print(f"Group Name: {app.group_name}")
-        print(f"Save Directory: {save_dir}")
-        print(f"Save Path: {full_path}")
-        print(f"Number of labels to save: {len(labels)}")
-        print(f"Labels data: {json.dumps(labels, indent=2)}")
+        print(f"\r\n{'='*50}")
+        print(f"\rSAVE MONTHLY LABELS TO FILE")
+        print(f"\r{'='*50}")
+        print(f"\rTimestamp: {pd.Timestamp.now()}")
+        print(f"\rPatient ID: {app.current_patient_id}")
+        print(f"\rGroup Name: {app.group_name}")
+        print(f"\rSave Directory: {save_dir}")
+        print(f"\rSave Path: {full_path}")
+        print(f"\rNumber of labels to save: {len(labels)}")
+        print(f"\rLabels data: {json.dumps(labels, indent=2)}")
         
         # Write labels to file with pretty formatting (indent=2)
         with open(save_file, 'w') as f:
@@ -368,23 +368,23 @@ def save_monthly_labels(app, labels):
         # Verify the save
         if os.path.exists(save_file):
             file_size = os.path.getsize(save_file)
-            print(f"✓ Save successful! File size: {file_size} bytes")
+            print(f"\r✓ Save successful! File size: {file_size} bytes")
             
             # Try to read it back
             with open(save_file, 'r') as f:
                 verify_data = json.load(f)
-                print(f"✓ Verification read successful: {len(verify_data)} labels")
+                print(f"\r✓ Verification read successful: {len(verify_data)} labels")
         else:
-            print("✗ ERROR: File doesn't exist after save attempt!")
-        print(f"{'='*50}\n")    
+            print("\r✗ ERROR: File doesn't exist after save attempt!")
+        print(f"\r{'='*50}\n")    
             
     except Exception as e:
-        print(f"\n{'!'*50}")
-        print(f"ERROR in save_monthly_labels: {e}")
-        print(f"Error Type: {type(e).__name__}")
+        print(f"\r\n{'!'*50}")
+        print(f"\rERROR in save_monthly_labels: {e}")
+        print(f"\rError Type: {type(e).__name__}")
         import traceback
         traceback.print_exc()
-        print(f"{'!'*50}\n")
+        print(f"\r{'!'*50}\n")
 #########
 
 def get_monthly_labels_info(app):
@@ -502,7 +502,7 @@ def get_monthly_labels_list(app):
             
         except Exception as e:
             # Skip invalid period entries without breaking the entire list
-            print(f"Error formatting month: {e}")
+            print(f"\rError formatting month: {e}")
             continue
     
     return month_list
