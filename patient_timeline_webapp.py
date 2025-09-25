@@ -87,7 +87,7 @@ class PatientTimelineApp:
             data_dir =  "patient_data" # os.path.join(repo_path, 'data')
             
             # Specific file to load (can be modified to load different files)
-            target_file = 'selected_events_mia_patients.csv'
+            target_file = 'selected_patient_events.csv'
             file_path = os.path.join(data_dir, target_file)
             
             # === Check File Existence ===
