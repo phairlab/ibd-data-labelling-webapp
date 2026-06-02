@@ -1,0 +1,72 @@
+{
+  "2016-08": {
+    "evidence": "Yes",
+    "categories": [
+      "LLM"
+    ],
+    "reason": "The patient's laboratory tests on August 23, 2016, showed low hemoglobin and mean corpuscular volume, indicating anemia, which is a common symptom of inflammatory bowel disease (IBD) flare. Additionally, the fecal immunochemical test on August 27, 2016, was positive, suggesting gastrointestinal bleeding, another potential symptom of IBD. The combination of these two findings, anemia and gastrointestinal bleeding, within a short timeframe suggests that the patient was likely experiencing a flare of their IBD. While further information is needed to confirm the diagnosis and severity of the condition, the provided events strongly indicate an active disease state or flare."
+  },
+  "2017-12": {
+    "evidence": "Yes",
+    "categories": [
+      "LLM"
+    ],
+    "reason": "The patient is likely experiencing a flare of their inflammatory bowel disease (IBD) based on the provided events. The diagnosis codes of K509 for Crohn's disease and K523 for indeterminate colitis on December 12, 2017, indicate active disease. Furthermore, the patient underwent multiple biopsies of the rectum, stomach, and small intestine using endoscopic approaches, which suggests that the patient's condition was being actively investigated and managed, a common approach during disease flares. Additionally, the IgA lab test result of 1.50 g/L on December 20, 2017, may indicate an immune response, which can be elevated during active inflammation. The proximity of these events to each other, particularly the investigative procedures and the lab test, supports the conclusion that the patient was experiencing a flare of their IBD at the time."
+  },
+  "2019-05": {
+    "evidence": "Yes",
+    "categories": [
+      "LLM"
+    ],
+    "reason": "The patient's history of Crohn's disease, as indicated by the diagnosis code K509 on May 22, 2019, combined with the ambulatory visit that included a biopsy of the rectum and large intestine, as well as a colonoscopy, suggests that the patient was experiencing symptoms or complications related to their Crohn's disease. Although the laboratory tests conducted on May 10, 2019, showed normal results for various parameters, including inflammatory markers such as C-reactive protein, the fact that these tests were followed by an ambulatory visit with invasive procedures implies that the patient's symptoms or condition warranted further investigation. This sequence of events indicates that the patient was likely experiencing a flare of their inflammatory bowel disease (IBD) around the time of the ambulatory visit, as the procedures undertaken are typically used to assess and manage active disease or complications. The normal laboratory results prior to the visit may reflect either a mild flare or the fact that laboratory tests do not always correlate with clinical symptoms in IBD patients."
+  },
+  "2014-04": {
+    "evidence": "No",
+    "categories": [
+      "LLM"
+    ],
+    "reason": "The patient's lab tests on April 10, 2014, showed normal results for various parameters, including a negative fecal immunochemical test, which suggests no active gastrointestinal bleeding, a common symptom of IBD flare. Although the tests did not include specific IBD markers like CRP, ESR, or fecal calprotectin, the absence of any abnormal findings or indications of IBD activity in the available test results makes it less likely that the patient was experiencing an IBD flare at this time. Without explicit evidence of inflammation or other signs of IBD activity, it's reasonable to conclude that the patient was not in a flare state based on the provided information."
+  },
+  "2016-11": {
+    "evidence": "No",
+    "categories": [
+      "LLM"
+    ],
+    "reason": "The laboratory tests from November 10, 2016, indicate iron-deficiency anemia, which could be related to chronic blood loss or inflammation, common in inflammatory bowel disease. However, these findings alone do not directly confirm an IBD flare. A flare would typically be indicated by additional symptoms such as increased stool frequency, abdominal pain, weight loss, or other clinical signs of active inflammation, which are not mentioned in the provided summary. Therefore, while the patient's condition suggests a possible complication related to IBD, such as chronic blood loss leading to anemia, it does not directly indicate an active flare of the disease based on the information given."
+  },
+  "2017-03": {
+    "evidence": "No",
+    "categories": [
+      "LLM"
+    ],
+    "reason": "While the patient's laboratory tests on March 10, 2017, showed signs of iron-deficiency anemia, which is a common complication of inflammatory bowel disease (IBD), there is not enough information provided to conclusively determine if the patient is experiencing an IBD flare. The presence of anemia, as indicated by low ferritin and hemoglobin levels, microcytic anemia, and a high red cell distribution width, could be related to IBD but also has other potential causes. Without specific IBD-related markers, symptoms, or a clear indication of disease activity, it's challenging to confirm an IBD flare based solely on these laboratory findings. Additional diagnostic information, such as endoscopic findings, biomarkers of inflammation (e.g., C-reactive protein, erythrocyte sedimentation rate), or clinical symptoms (e.g., increased stool frequency, abdominal pain, weight loss), would be necessary to determine if the patient is experiencing an active flare of their IBD."
+  },
+  "2018-02": {
+    "evidence": "No",
+    "categories": [
+      "LLM"
+    ],
+    "reason": "The patient's CT enterography on February 8, 2018, showed no evidence of large or small bowel inflammation, which is a key indicator of an IBD flare. Additionally, there is no mention of symptoms typically associated with an IBD flare, such as increased diarrhea, abdominal pain, or blood in the stool. The presence of a large uterine fibroid is noted, but it is not related to the patient's IBD. The creatinine lab test result is provided, but without further context or abnormal status noted, it does not contribute to the assessment of an IBD flare. Overall, based on the information provided, there is no indication that the patient is experiencing a flare of their inflammatory bowel disease."
+  },
+  "2018-03": {
+    "evidence": "No",
+    "categories": [
+      "LLM"
+    ],
+    "reason": "The provided lab results do not indicate a clear flare of inflammatory bowel disease (IBD). The patient's hemoglobin level is within the normal range at 130 g/L, which suggests that despite the presence of iron-deficiency anemia (indicated by low ferritin of 6 ug/L and low Mean Corpuscular Volume of 78 fL), the anemia is not currently severe enough to be a definitive marker of an IBD flare. Additionally, the platelet count is slightly elevated at 280 x 10^9/L, which can sometimes be seen in inflammatory conditions, but on its own is not a specific indicator of an IBD flare. The WBC test result reported as 'occasional' on March 28, 2018, lacks specificity and does not provide clear evidence of an acute inflammatory response typical of an IBD flare. Overall, while the patient's iron-deficiency anemia could be related to chronic inflammation from IBD, the information provided does not specifically indicate an acute flare of the disease."
+  },
+  "2018-08": {
+    "evidence": "No",
+    "categories": [
+      "LLM"
+    ],
+    "reason": "The patient's medical history from 2018-08-02 to 2018-08-19 does not show any direct evidence of inflammatory bowel disease (IBD) or IBD-related events. The hospital admission was for postmenopausal bleeding, leiomyoma of the uterus, and other noninflammatory disorders of the ovary, fallopian tube, and broad ligament, which are unrelated to IBD. Although there were fluctuations in hemoglobin levels, this could be attributed to the surgical procedures or other non-IBD related conditions. The prescription of tramadol and paracetamol for pain management also does not specifically indicate an IBD flare. Overall, there is no clear indication of an IBD flare or any IBD-related medical attention during this time period, leading to the conclusion that the patient is unlikely experiencing a flare of their inflammatory bowel disease."
+  },
+  "2018-09": {
+    "evidence": "No",
+    "categories": [
+      "LLM"
+    ],
+    "reason": "The patient's C-Reactive Protein (CRP) test result on September 12, 2018, was 3.5 mg/L, which is within normal limits. This suggests a low level of inflammation, indicating that the patient is unlikely to be experiencing an active inflammatory bowel disease (IBD) flare at this time. The normal CRP level is a strong indicator that the patient's IBD is currently under control, and there is no evidence of increased inflammation that would typically accompany an IBD flare."
+  }
+}

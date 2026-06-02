@@ -1,0 +1,38 @@
+{
+  "2010-10": {
+    "evidence": "Yes",
+    "categories": [
+      "LLM"
+    ],
+    "reason": "There's some drug in here that seems sus to me, probably IBD"
+  },
+  "2010-12": {
+    "evidence": "Yes",
+    "categories": [
+      "physician_claim",
+      "ambulatory_visit"
+    ],
+    "reason": "Yeah that's for sure IBD. No cap"
+  },
+  "2009-02": {
+    "evidence": "Yes",
+    "categories": [
+      "physician_claim"
+    ],
+    "reason": ""
+  },
+  "2008-05": {
+    "evidence": "Yes",
+    "categories": [
+      "physician_claim"
+    ],
+    "reason": "alkmcalksmdla"
+  },
+  "2009-06": {
+    "evidence": "Yes",
+    "categories": [
+      "imaging"
+    ],
+    "reason": "I just feel there's an image in here somewhere"
+  }
+}
