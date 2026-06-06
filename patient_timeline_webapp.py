@@ -747,5 +747,39 @@ class PatientTimelineApp:
             except Exception as e:
                 print(f"Error formatting monthly flare: {e}")
                 continue
-        
+
         return info
+
+    def load_patient_timeline_html(self, patient_id):
+        """
+        Load timeline as client-side HTML/JS (Plotly.js) — no IBD filter round-trip.
+
+        Returns:
+            tuple: (html_string, status_message, chart_info_text)
+        """
+        if self.combined_data is None:
+            placeholder = "<p style='color:#6b7280;padding:20px;'>Please load patient data first.</p>"
+            return placeholder, "Please load patient data first", ""
+
+        if not patient_id:
+            placeholder = "<p style='color:#6b7280;padding:20px;'>Please select a patient ID.</p>"
+            return placeholder, "Please select a patient ID", ""
+
+        try:
+            patient_data = self.combined_data[
+                self.combined_data['patient_id'] == int(patient_id)
+            ].copy()
+
+            self.current_patient_data = patient_data
+            self.current_patient_id   = int(patient_id)
+            self.load_existing_flares()
+
+            from timeline_visualization import build_timeline_html
+            html   = build_timeline_html(self)
+            info   = self.get_chart_info()
+            status = f"Chart loaded for Patient {self.current_patient_id} — filter using the buttons above the chart"
+            return html, status, info
+
+        except Exception as e:
+            err_html = f"<p style='color:#ef4444;padding:20px;'>Error: {str(e)}</p>"
+            return err_html, f"Failed to load patient timeline: {str(e)}", ""
