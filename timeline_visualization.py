@@ -808,3 +808,375 @@ def create_monthly_timeline(app, selected_month, view_offset=0):
     except Exception as e:
         print(f"Error creating monthly timeline: {e}")
         return None
+
+
+# ============================================================================
+# CLIENT-SIDE (PLOTLY.JS) TIMELINE — Phase 1 migration
+# ============================================================================
+
+def _serialize_patient_data(app):
+    """Convert current patient data and flares to JSON-safe Python lists."""
+    if app.current_patient_data is None:
+        return [], []
+
+    events = []
+    for _, row in app.current_patient_data.iterrows():
+        # event_info may be NaN / None
+        event_info = row.get('event_info', None)
+        if event_info is None or (isinstance(event_info, float) and pd.isna(event_info)):
+            event_info = '{}'
+        elif not isinstance(event_info, str):
+            event_info = str(event_info)
+
+        # source_dataset is optional
+        source_dataset = ''
+        if 'source_dataset' in row.index:
+            sd = row.get('source_dataset')
+            if sd is not None and not (isinstance(sd, float) and pd.isna(sd)):
+                source_dataset = str(sd)
+
+        ibd_val = row.get('ibd_related', False)
+        if ibd_val is None or (isinstance(ibd_val, float) and pd.isna(ibd_val)):
+            ibd_val = False
+
+        events.append({
+            'start_date':     row['start_date'].strftime('%Y-%m-%dT%H:%M:%S'),
+            'end_date':       row['end_date'].strftime('%Y-%m-%dT%H:%M:%S'),
+            'event_type':     str(row.get('event_type', '')),
+            'ibd_related':    bool(ibd_val),
+            'event_info':     event_info,
+            'source_dataset': source_dataset,
+        })
+
+    flares = []
+
+    # Date-based flares saved via the old flare-marking interface
+    for flare_data in app.ranges:
+        if len(flare_data) == 3:
+            start_date, end_date, reason = flare_data
+            categories = []
+        else:
+            start_date, end_date, categories, reason = flare_data
+        flares.append({
+            'start_date': pd.to_datetime(start_date).strftime('%Y-%m-%d'),
+            'end_date':   pd.to_datetime(end_date).strftime('%Y-%m-%d'),
+            'categories': list(categories),
+            'reason':     str(reason) if reason else '',
+            'type':       'date_based',
+        })
+
+    # Monthly flares from labelling mode
+    try:
+        from monthly_labelling import load_monthly_labels
+        monthly_labels = load_monthly_labels(app)
+        for month_period_str, label_data in monthly_labels.items():
+            if label_data.get('evidence') != 'Yes':
+                continue
+            try:
+                period = pd.Period(month_period_str)
+                flares.append({
+                    'start_date': period.start_time.strftime('%Y-%m-%d'),
+                    'end_date':   period.end_time.strftime('%Y-%m-%d'),
+                    'categories': list(label_data.get('categories', [])),
+                    'reason':     str(label_data.get('reason', '')),
+                    'type':       'monthly',
+                })
+            except Exception:
+                pass
+    except Exception:
+        pass
+
+    return events, flares
+
+
+# Inner HTML document that lives inside the iframe.
+# ALL_EVENTS and FLARES are injected as inline JS variables so timeline.js can use them.
+# Uses __EVENTS_JSON__ / __FLARES_JSON__ placeholders replaced by build_timeline_html().
+_TIMELINE_IFRAME_INNER = """<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<script src="https://cdn.plot.ly/plotly-2.35.0.min.js"></script>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:Inter,Arial,sans-serif; background:white; }
+  #filter-bar { display:flex; gap:8px; padding:10px 8px 8px; align-items:center; flex-wrap:wrap; }
+  .fbtn { padding:6px 16px; border-radius:6px; border:none; font-size:13px;
+          font-weight:500; cursor:pointer; transition:background 0.2s,color 0.2s; }
+  .fbtn.on  { background:#3b82f6; color:white; }
+  .fbtn.off { background:#e5e7eb; color:#374151; }
+
+  /* Unified toolbar bar — light blue plate, single row */
+  #filter-bar {
+    background: #eff6ff;
+    border-radius: 8px;
+    padding: 8px 12px;
+    margin: 6px 6px 0;
+    border: 1px solid #bfdbfe;
+    flex-wrap: nowrap !important;
+  }
+
+  /* Modebar when moved into filter bar — horizontal, pushed to the right */
+  #filter-bar .modebar-container {
+    position: static !important;
+    margin-left: auto;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+  #filter-bar .modebar,
+  #filter-bar .modebar-group {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    background: transparent !important;
+  }
+  #filter-bar .modebar-btn svg { width: 20px !important; height: 20px !important; }
+  #filter-bar .modebar-btn     { padding: 4px 6px !important; }
+</style>
+</head>
+<body>
+<div id="filter-bar">
+  <span style="font-size:14px;font-weight:600;color:#374151;margin-right:4px;">Event Filter:</span>
+  <button class="fbtn on"  onclick="setF('all')">All Events</button>
+  <button class="fbtn off" onclick="setF('ibd')">IBD Related Only</button>
+  <button class="fbtn off" onclick="setF('non_ibd')">Non-IBD Only</button>
+</div>
+<div id="plot"></div>
+<script>
+// Patient data injected by Python — consumed by timeline.js
+var ALL_EVENTS = __EVENTS_JSON__;
+var FLARES     = __FLARES_JSON__;
+</script>
+<script>
+__TIMELINE_JS__
+</script>
+</body>
+</html>"""
+
+# Dummy template kept only so old references don't break — not used for rendering
+_TIMELINE_HTML_TEMPLATE = """
+<div id="ptv-container" style="width:100%;font-family:Inter,Arial,sans-serif;">
+  <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center;flex-wrap:wrap;">
+    <span style="font-size:14px;font-weight:600;color:#374151;margin-right:4px;">Event Filter:</span>
+    <button id="ptv-btn-all" onclick="ptvSetFilter('all')"
+      style="padding:6px 16px;border-radius:6px;border:none;background:#3b82f6;color:white;
+             font-size:13px;font-weight:500;cursor:pointer;transition:all 0.2s;">
+      All Events
+    </button>
+    <button id="ptv-btn-ibd" onclick="ptvSetFilter('ibd')"
+      style="padding:6px 16px;border-radius:6px;border:none;background:#e5e7eb;color:#374151;
+             font-size:13px;font-weight:500;cursor:pointer;transition:all 0.2s;">
+      IBD Related Only
+    </button>
+    <button id="ptv-btn-non_ibd" onclick="ptvSetFilter('non_ibd')"
+      style="padding:6px 16px;border-radius:6px;border:none;background:#e5e7eb;color:#374151;
+             font-size:13px;font-weight:500;cursor:pointer;transition:all 0.2s;">
+      Non-IBD Only
+    </button>
+  </div>
+  <div id="ptv-plot" style="width:100%;"></div>
+</div>
+<script>
+(function () {
+    var ALL_EVENTS = __EVENTS_JSON__;
+    var FLARES     = __FLARES_JSON__;
+
+    var FIXED_ORDER = [
+        'imaging','prescription','ambulatory_visit',
+        'physician_claim','hospital_admission','lab_test'
+    ];
+    var LABEL_MAP = {
+        'ambulatory_visit':  'Ambulatory Visit',
+        'lab_test':          'Lab Test',
+        'prescription':      'Prescription',
+        'physician_claim':   'Physician Claim',
+        'hospital_admission':'Hospital Admission',
+        'imaging':           'Imaging'
+    };
+    var COLOR_MAP = {
+        'imaging':           '#636EFA',
+        'prescription':      '#EF553B',
+        'ambulatory_visit':  '#00CC96',
+        'physician_claim':   '#AB63FA',
+        'hospital_admission':'#FFA15A',
+        'lab_test':          '#19D3F3'
+    };
+
+    function filterData(f) {
+        if (f === 'ibd')     return ALL_EVENTS.filter(function(e){ return  e.ibd_related; });
+        if (f === 'non_ibd') return ALL_EVENTS.filter(function(e){ return !e.ibd_related; });
+        return ALL_EVENTS;
+    }
+
+    function buildHoverText(e) {
+        var t = '<b>start_date:</b> ' + e.start_date.split('T')[0] +
+                '<br><b>end_date:</b> '  + e.end_date.split('T')[0] + '<br>';
+        try {
+            var info = typeof e.event_info === 'string' ? JSON.parse(e.event_info) : e.event_info;
+            Object.keys(info).forEach(function(k) {
+                if (k === 'dummy') return;
+                var v = String(info[k]);
+                if (v.length > 40) {
+                    var chunks = [];
+                    for (var i = 0; i < v.length; i += 40) chunks.push(v.slice(i, i+40));
+                    t += '<b>' + k + ':</b><br>' + chunks.join('<br>') + '<br>';
+                } else {
+                    t += '<b>' + k + ':</b> ' + v + '<br>';
+                }
+            });
+        } catch(err) {}
+        if (e.source_dataset) t += '<b>source_dataset:</b> ' + e.source_dataset + '<br>';
+        t += '<b>ibd_related:</b> ' + e.ibd_related;
+        return t;
+    }
+
+    function processEvents(events) {
+        var result = events.map(function(e){ return Object.assign({}, e); });
+        result.forEach(function(e) {
+            e._s = new Date(e.start_date).getTime();
+            e._e = new Date(e.end_date).getTime();
+            if (e._s === e._e) e._e += 86400000;
+        });
+        // Stagger same-day lab tests by 2 h each
+        var labByDate = {};
+        result.filter(function(e){ return e.event_type === 'lab_test'; })
+              .forEach(function(e) {
+                  var k = e.start_date.split('T')[0];
+                  if (!labByDate[k]) labByDate[k] = [];
+                  labByDate[k].push(e);
+              });
+        Object.keys(labByDate).forEach(function(k) {
+            var grp = labByDate[k];
+            if (grp.length > 1) grp.forEach(function(e, i) {
+                var off = i * 7200000;
+                e._s += off; e._e += off;
+            });
+        });
+        return result;
+    }
+
+    function renderChart(filter) {
+        var events = processEvents(filterData(filter));
+        var refMs  = ALL_EVENTS.length ? new Date(ALL_EVENTS[0].start_date).getTime() : Date.now();
+        var traces = [];
+
+        FIXED_ORDER.forEach(function(et) {
+            var te    = events.filter(function(e){ return e.event_type === et; });
+            var dummy = te.length === 0;
+            traces.push({
+                type:          'bar',
+                orientation:   'h',
+                name:          LABEL_MAP[et] || et,
+                x:             dummy ? [0]     : te.map(function(e){ return e._e - e._s; }),
+                base:          dummy ? [refMs] : te.map(function(e){ return e._s; }),
+                y:             dummy ? [et]    : te.map(function()  { return et; }),
+                text:          dummy ? ['']    : te.map(function(e) { return buildHoverText(e); }),
+                hovertemplate: dummy ? '<extra></extra>' : '%{text}<extra></extra>',
+                marker:        { color: COLOR_MAP[et] || '#888', opacity: dummy ? 0 : 1 },
+                width:         dummy ? 0 : 0.9,
+                showlegend:    false
+            });
+        });
+
+        var shapes = FLARES.map(function(f) {
+            return {
+                type:'rect', xref:'x', yref:'paper',
+                x0: f.start_date, x1: f.end_date,
+                y0: 0, y1: 1,
+                fillcolor: 'red', opacity: 0.3,
+                layer: 'below', line: { width: 0 }
+            };
+        });
+
+        var allSMs = ALL_EVENTS.map(function(e){ return new Date(e.start_date).getTime(); });
+        var allEMs = ALL_EVENTS.map(function(e){ return new Date(e.end_date).getTime(); });
+        var tMin   = allSMs.length ? Math.min.apply(null, allSMs) : refMs;
+        var tMax   = allEMs.length ? Math.max.apply(null, allEMs) : refMs;
+        tMin -= 864000000;
+        tMax += 864000000;
+
+        var layout = {
+            xaxis:        { type:'date', title:'Time', range:[tMin, tMax] },
+            yaxis:        {
+                title:         'Event Type',
+                categoryorder: 'array',
+                categoryarray: FIXED_ORDER,
+                tickvals:      FIXED_ORDER,
+                ticktext:      FIXED_ORDER.map(function(et){ return LABEL_MAP[et] || et; })
+            },
+            barmode:      'overlay',
+            showlegend:   false,
+            height:       800,
+            margin:       { l:150, r:30, t:20, b:60 },
+            shapes:       shapes,
+            hovermode:    'closest',
+            bargap:       0.1,
+            bargroupgap:  0.0,
+            plot_bgcolor: 'white',
+            paper_bgcolor:'white'
+        };
+
+        Plotly.newPlot('ptv-plot', traces, layout,
+            { responsive:true, displayModeBar:true,
+              modeBarButtonsToRemove:['select2d','lasso2d'] });
+    }
+
+    window.ptvSetFilter = function(filter) {
+        ['all','ibd','non_ibd'].forEach(function(f) {
+            var btn = document.getElementById('ptv-btn-' + f);
+            if (!btn) return;
+            btn.style.background = f === filter ? '#3b82f6' : '#e5e7eb';
+            btn.style.color      = f === filter ? 'white'   : '#374151';
+        });
+        renderChart(filter);
+    };
+
+    function init() {
+        if (window.Plotly) { renderChart('all'); return; }
+        // If CDN script is already injected but not yet loaded, wait for it
+        if (document.querySelector('script[src*="plotly"]')) {
+            var iv = setInterval(function() {
+                if (window.Plotly) { clearInterval(iv); renderChart('all'); }
+            }, 100);
+            return;
+        }
+        // First time: inject CDN script
+        var s = document.createElement('script');
+        s.src = 'https://cdn.plot.ly/plotly-2.35.0.min.js';
+        s.onload = function() { renderChart('all'); };
+        document.head.appendChild(s);
+    }
+
+    setTimeout(init, 80);
+}());
+</script>
+"""
+
+
+def build_timeline_html(app):
+    """Return an iframe wrapping a self-contained Plotly.js timeline document.
+
+    Reads static/timeline.js and inlines it so the supervisor can see a real
+    JS file while the iframe remains fully self-contained (no external URL
+    requests from srcdoc, which browsers restrict).
+    """
+    import html as _html
+    import os
+
+    js_path = os.path.join(os.path.dirname(__file__), 'static', 'timeline.js')
+    with open(js_path, 'r') as f:
+        timeline_js = f.read()
+
+    events, flares = _serialize_patient_data(app)
+    inner = _TIMELINE_IFRAME_INNER \
+        .replace('__EVENTS_JSON__', json.dumps(events)) \
+        .replace('__FLARES_JSON__', json.dumps(flares)) \
+        .replace('__TIMELINE_JS__', timeline_js)
+
+    srcdoc = _html.escape(inner, quote=True)
+    return (
+        f'<iframe srcdoc="{srcdoc}" '
+        f'style="width:100%;height:880px;border:none;display:block;">'
+        f'</iframe>'
+    )
