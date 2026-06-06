@@ -96,6 +96,7 @@ def create_app_with_args():
         return PatientTimelineApp(patient_range=(args.start, args.end), group_name=args.name)
     elif args.command == 'admin':
         # Admin gets access to all patients (no range restriction)
+        #(real data)
         return PatientTimelineApp(patient_range=None, group_name="Admin (All Patients)")
     elif args.command == 'dev':
         # Development mode creates app with sample data
@@ -370,24 +371,15 @@ def create_interface():
                     # Right column: Chart controls and filters
                     with gr.Column(scale=5):
                         gr.Markdown("### Timeline Chart")
-                        
-                        # IBD Filter controls above the chart
-                        with gr.Row():
-                            # Radio buttons to filter events by IBD relevance
-                            ibd_filter = gr.Radio(
-                                choices=["All Events", "IBD Related Only", "Non-IBD Related Only"],
-                                label="Event Filter",
-                                value="All Events",
-                                interactive=True
-                            )
-                            # Manual refresh button (changes auto-update, but this provides explicit control)
-                            refresh_chart_btn = gr.Button("Refresh Chart", variant="secondary")
-                        
                         # Status message for chart operations
                         chart_status = gr.Textbox(label="Chart Status", value="No chart loaded", interactive=False)
-                
-                # Full width timeline plot - main visualization area
-                timeline_plot = gr.Plot(label="Patient Timeline")
+
+                # Full width timeline — rendered client-side via Plotly.js
+                # IBD filter buttons live inside the HTML component (no Python round-trip)
+                timeline_plot = gr.HTML(
+                    value="<p style='color:#6b7280;padding:20px;text-align:center;'>"
+                          "Select a patient and click Load Timeline to view the chart.</p>"
+                )
                 
                 # Chart information panel - shows patient stats and flare summaries
                 chart_info = gr.Textbox(label="Chart Information", value="No patient data loaded", 
@@ -687,31 +679,17 @@ def create_interface():
         # EVENT HANDLERS - TIMELINE VIEWER TAB
         # ====================================================================
         
-        # Manual load timeline button
+        # Load timeline button — returns HTML/JS with filter buttons embedded
         load_timeline_btn.click(
-            app.load_patient_timeline,  # App method that creates timeline visualization
-            inputs=[patient_dropdown, ibd_filter],  # Current patient and filter settings
-            outputs=[timeline_plot, chart_status, chart_info]  # Update chart and info
-        )
-        
-        # IBD filter change: Auto-refresh when filter changes
-        ibd_filter.change(
-            app.load_patient_timeline,  # Same method as manual load
-            inputs=[patient_dropdown, ibd_filter],
+            app.load_patient_timeline_html,
+            inputs=[patient_dropdown],
             outputs=[timeline_plot, chart_status, chart_info]
         )
-        
-        # Manual refresh chart button (provides explicit control)
-        refresh_chart_btn.click(
-            app.load_patient_timeline,
-            inputs=[patient_dropdown, ibd_filter],
-            outputs=[timeline_plot, chart_status, chart_info]
-        )
-        
-        # Auto-refresh timeline when patient changes (key usability feature)
+
+        # Auto-load when patient dropdown changes
         patient_dropdown.change(
-            app.load_patient_timeline,
-            inputs=[patient_dropdown, ibd_filter],
+            app.load_patient_timeline_html,
+            inputs=[patient_dropdown],
             outputs=[timeline_plot, chart_status, chart_info]
         )
         
@@ -884,4 +862,4 @@ if __name__ == "__main__":
     
     # Create and launch the Gradio web interface
     demo = create_interface()
-    demo.launch()  # By default launches on localhost:7860
+    demo.launch(allowed_paths=["static"])  # serve static/timeline.js
