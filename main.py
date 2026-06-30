@@ -47,30 +47,42 @@ def parse_arguments():
     group_a = subparsers.add_parser('group-a', help='Access patients 1-100')
     group_a.add_argument('--start', type=int, default=1, help='Start patient ID (default: 1)')
     group_a.add_argument('--end', type=int, default=100, help='End patient ID (default: 100)')
-    
+    group_a.add_argument('--rmt23345-dir', type=str, default=None, dest='rmt23345_dir',
+                         help='Directory containing cleaned RMT23345_*.csv files')
+
     # GROUP B: Patients 101-200 (e.g., for Research Team B)
     group_b = subparsers.add_parser('group-b', help='Access patients 101-200')
     group_b.add_argument('--start', type=int, default=101, help='Start patient ID (default: 101)')
     group_b.add_argument('--end', type=int, default=200, help='End patient ID (default: 200)')
-    
+    group_b.add_argument('--rmt23345-dir', type=str, default=None, dest='rmt23345_dir',
+                         help='Directory containing cleaned RMT23345_*.csv files')
+
     # GROUP C: Patients 201-300 (e.g., for Clinical Team)
     group_c = subparsers.add_parser('group-c', help='Access patients 201-300')
     group_c.add_argument('--start', type=int, default=201, help='Start patient ID (default: 201)')
     group_c.add_argument('--end', type=int, default=300, help='End patient ID (default: 300)')
-    
+    group_c.add_argument('--rmt23345-dir', type=str, default=None, dest='rmt23345_dir',
+                         help='Directory containing cleaned RMT23345_*.csv files')
+
     # CUSTOM RANGE: For specific research projects or temporary access
     custom = subparsers.add_parser('custom', help='Access custom patient range')
     custom.add_argument('--start', type=int, required=True, help='Start patient ID')
     custom.add_argument('--end', type=int, required=True, help='End patient ID')
     custom.add_argument('--name', type=str, default='Custom', help='Group name for display')
-    
+    custom.add_argument('--rmt23345-dir', type=str, default=None, dest='rmt23345_dir',
+                        help='Directory containing cleaned RMT23345_*.csv files')
+
     # ADMIN ACCESS: All patients (for administrators/supervisors)
     admin = subparsers.add_parser('admin', help='Access all patients (admin mode)')
+    admin.add_argument('--rmt23345-dir', type=str, default=None, dest='rmt23345_dir',
+                       help='Directory containing cleaned RMT23345_*.csv files')
     
     # DEVELOPMENT MODE: Sample data for testing/development
     dev = subparsers.add_parser('dev', help='Development mode with sample data')
     dev.add_argument('--patients', type=int, default=50, help='Number of sample patients (default: 50)')
-    
+    dev.add_argument('--rmt23345-dir', type=str, default=None, dest='rmt23345_dir',
+                     help='Directory containing cleaned RMT23345_*.csv files')
+
     return parser.parse_args()
 
 def create_app_with_args():
@@ -87,22 +99,29 @@ def create_app_with_args():
     
     # Create app instance based on which command was used
     if args.command == 'group-a':
-        return PatientTimelineApp(patient_range=(args.start, args.end), group_name="Group A")
+        pr = None if args.rmt23345_dir else (args.start, args.end)
+        return PatientTimelineApp(patient_range=pr, group_name="Group A",
+                                  rmt23345_data_dir=args.rmt23345_dir)
     elif args.command == 'group-b':
-        return PatientTimelineApp(patient_range=(args.start, args.end), group_name="Group B")
+        pr = None if args.rmt23345_dir else (args.start, args.end)
+        return PatientTimelineApp(patient_range=pr, group_name="Group B",
+                                  rmt23345_data_dir=args.rmt23345_dir)
     elif args.command == 'group-c':
-        return PatientTimelineApp(patient_range=(args.start, args.end), group_name="Group C")
+        pr = None if args.rmt23345_dir else (args.start, args.end)
+        return PatientTimelineApp(patient_range=pr, group_name="Group C",
+                                  rmt23345_data_dir=args.rmt23345_dir)
     elif args.command == 'custom':
-        return PatientTimelineApp(patient_range=(args.start, args.end), group_name=args.name)
+        pr = None if args.rmt23345_dir else (args.start, args.end)
+        return PatientTimelineApp(patient_range=pr, group_name=args.name,
+                                  rmt23345_data_dir=args.rmt23345_dir)
     elif args.command == 'admin':
-        # Admin gets access to all patients (no range restriction)
-        #(real data)
-        return PatientTimelineApp(patient_range=None, group_name="Admin (All Patients)")
+        return PatientTimelineApp(patient_range=None, group_name="Admin (All Patients)",
+                                  rmt23345_data_dir=args.rmt23345_dir)
     elif args.command == 'dev':
-        # Development mode creates app with sample data
-        app = PatientTimelineApp(patient_range=None, group_name="Development Mode")
-        # Override with fake data for testing (20 events per patient average)
-        app.combined_data = app.generate_fake_data(args.patients * 20)
+        app = PatientTimelineApp(patient_range=None, group_name="Development Mode",
+                                 rmt23345_data_dir=args.rmt23345_dir)
+        if not args.rmt23345_dir:
+            app.combined_data = app.generate_fake_data(args.patients * 20)
         return app
     else:
         # No valid command provided - show help and exit
@@ -168,7 +187,7 @@ def create_interface():
                 margin-top: 10px !important;
                 margin-bottom: 8px !important;
             }
-            
+            iu
             .clean-control-column .section-title:first-child {
                 margin-top: 0 !important;
             }
@@ -862,4 +881,4 @@ if __name__ == "__main__":
     
     # Create and launch the Gradio web interface
     demo = create_interface()
-    demo.launch(allowed_paths=["static"])  # serve static/timeline.js
+    demo.launch()  # By default launches on localhost:7860

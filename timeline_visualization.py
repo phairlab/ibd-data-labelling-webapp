@@ -70,15 +70,13 @@ def ensure_all_event_types(data):
         # Add dummy rows to data
         dummy_df = pd.DataFrame(dummy_rows)
         data = pd.concat([data, dummy_df], ignore_index=True)
+        # here we are initializing the pandas data after getting it from the csv files 
     
     # Mark real data
     if 'is_dummy' not in data.columns:
         data['is_dummy'] = False
     
     return data
-
-
-
 
 
 def get_label_mapping():
@@ -655,10 +653,10 @@ def create_monthly_timeline(app, selected_month, view_offset=0):
                 # === Create Completely Empty Dataset ===
                 # For months with no events at all
                 data = pd.DataFrame({
-                    'start_date': [start_date] * len(all_event_types),
-                    'end_date': [start_date] * len(all_event_types),
-                    'event_type': all_event_types,
-                    'is_dummy': [True] * len(all_event_types)
+                    'start_date': [start_date] * len(fixed_order),
+                    'end_date': [start_date] * len(fixed_order),
+                    'event_type': fixed_order,
+                    'is_dummy': [True] * len(fixed_order)
                 })
         
         # === Process Real Data Only ===
@@ -1010,8 +1008,10 @@ _TIMELINE_HTML_TEMPLATE = """
     }
 
     function buildHoverText(e) {
-        var t = '<b>start_date:</b> ' + e.start_date.split('T')[0] +
-                '<br><b>end_date:</b> '  + e.end_date.split('T')[0] + '<br>';
+        var label = LABEL_MAP[e.event_type] || e.event_type || '';
+        var t = (label ? '<b>event_type:</b> ' + label + '<br>' : '') +
+                '<b>start:</b> ' + e.start_date.split('T')[0] +
+                '<br><b>end:</b> '  + e.end_date.split('T')[0] + '<br>';
         try {
             var info = typeof e.event_info === 'string' ? JSON.parse(e.event_info) : e.event_info;
             Object.keys(info).forEach(function(k) {
@@ -1025,7 +1025,20 @@ _TIMELINE_HTML_TEMPLATE = """
                     t += '<b>' + k + ':</b> ' + v + '<br>';
                 }
             });
-        } catch(err) {}
+        } catch(err) {
+            // Plain string event_info (e.g. "At: Hospital | Dx: ... | CMG: ...")
+            var raw = e.event_info ? String(e.event_info).trim() : '';
+            if (raw) {
+                raw.split(' | ').forEach(function(part) {
+                    var ci = part.indexOf(': ');
+                    if (ci > 0) {
+                        t += '<b>' + part.slice(0, ci) + ':</b> ' + part.slice(ci + 2) + '<br>';
+                    } else if (part) {
+                        t += part + '<br>';
+                    }
+                });
+            }
+        }
         if (e.source_dataset) t += '<b>source_dataset:</b> ' + e.source_dataset + '<br>';
         t += '<b>ibd_related:</b> ' + e.ibd_related;
         return t;

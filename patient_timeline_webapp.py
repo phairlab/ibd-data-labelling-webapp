@@ -7,6 +7,20 @@ import textwrap
 from datetime import datetime, timedelta
 import numpy as np
 import random
+import yaml
+from rmt23345_events import load_all_events
+
+
+def _load_study_config(config_path: str = "study_config.yaml") -> dict:
+    """Load study_config.yaml if it exists; return empty dict otherwise."""
+    try:
+        with open(config_path) as f:
+            return yaml.safe_load(f) or {}
+    except FileNotFoundError:
+        return {}
+    except Exception as e:
+        print(f"[study_config] Warning: could not read {config_path}: {e}")
+        return {}
 
 
 class PatientTimelineApp:
@@ -25,7 +39,7 @@ class PatientTimelineApp:
     - Export functionality for data and charts
     """
     
-    def __init__(self, patient_range=None, group_name="Default"):
+    def __init__(self, patient_range=None, group_name="Default", rmt23345_data_dir=None):
         """
         Initialize the Patient Timeline App.
         
@@ -47,6 +61,10 @@ class PatientTimelineApp:
         # These settings control which patients this app instance can access
         self.patient_range = patient_range  # (start_id, end_id) tuple or None for all patients
         self.group_name = group_name       # Display name for this patient group
+
+        # === RMT23345 Data Directory ===
+        # If set, load events from cleaned RMT23345 CSVs instead of the default CSV
+        self.rmt23345_data_dir = rmt23345_data_dir
         
         # === Navigation State ===
         # Used in labeling mode to track view offset from selected month
@@ -77,6 +95,25 @@ class PatientTimelineApp:
         - source_dataset: Data source identifier
         """
         try:
+            # === Try RMT23345 cleaned CSVs first ===
+            if self.rmt23345_data_dir and os.path.isdir(self.rmt23345_data_dir):
+                try:
+                    study_config = _load_study_config()
+                    if study_config:
+                        enabled = study_config.get("sources", {}).get("enabled", [])
+                        print(f"study_config.yaml: loading sources {enabled}")
+                    print(f"Loading from RMT23345 directory: {self.rmt23345_data_dir}")
+                    df = load_all_events(self.rmt23345_data_dir, config=study_config)
+                    if len(df) > 0:
+                        df['start_date'] = pd.to_datetime(df['start_date'], utc=True, errors='coerce').dt.tz_localize(None)
+                        df['end_date']   = pd.to_datetime(df['end_date'],   utc=True, errors='coerce').dt.tz_localize(None)
+                        self.combined_data = df
+                        print(f"Loaded {len(df)} events from RMT23345 CSVs")
+                        self.apply_patient_filter()
+                        return
+                except Exception as e:
+                    print(f"Failed to load RMT23345 data: {e}, falling back...")
+
             # === Define Data Location ===
             # Set the repository path and data directory
             repo_path = '/data/external_ps/baumgart/BAUMGART_SHARED/Baumgart_IBD/Sacha/ibd_activity_viewer'
@@ -766,12 +803,17 @@ class PatientTimelineApp:
             return placeholder, "Please select a patient ID", ""
 
         try:
+            try:
+                pid = int(patient_id)
+            except (ValueError, TypeError):
+                pid = patient_id
+
             patient_data = self.combined_data[
-                self.combined_data['patient_id'] == int(patient_id)
+                self.combined_data['patient_id'].astype(str) == str(pid)
             ].copy()
 
             self.current_patient_data = patient_data
-            self.current_patient_id   = int(patient_id)
+            self.current_patient_id   = pid
             self.load_existing_flares()
 
             from timeline_visualization import build_timeline_html
