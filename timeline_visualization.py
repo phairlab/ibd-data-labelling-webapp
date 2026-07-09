@@ -139,8 +139,10 @@ def create_hover_data(data):
                     info = json.loads(row['event_info']) if isinstance(row['event_info'], str) else row['event_info']
                     
                     # === Build Hover Text with Basic Info ===
-                    hover_text = f"<b>start_date:</b> {row['start_date'].strftime('%Y-%m-%d')}<br>"
-                    hover_text += f"<b>end_date:</b> {row['end_date'].strftime('%Y-%m-%d')}<br>"
+                    start_str = row['start_date'].strftime('%Y-%m-%d') if pd.notna(row['start_date']) else 'N/A'
+                    end_str = row['end_date'].strftime('%Y-%m-%d') if pd.notna(row['end_date']) else 'N/A'
+                    hover_text = f"<b>start_date:</b> {start_str}<br>"
+                    hover_text += f"<b>end_date:</b> {end_str}<br>"
                     
                     # === Add Event Info Details ===
                     for key, value in info.items():
@@ -165,21 +167,23 @@ def create_hover_data(data):
                 except (json.JSONDecodeError, TypeError):
                     # === Fallback for JSON Parse Errors ===
                     # Create basic hover text when JSON parsing fails
-                    hover_text = f"<b>start_date:</b> {row['start_date'].strftime('%Y-%m-%d')}<br>"
-                    hover_text += f"<b>end_date:</b> {row['end_date'].strftime('%Y-%m-%d')}<br>"
+                    start_str = row['start_date'].strftime('%Y-%m-%d') if pd.notna(row['start_date']) else 'N/A'
+                    end_str = row['end_date'].strftime('%Y-%m-%d') if pd.notna(row['end_date']) else 'N/A'
+                    hover_text = f"<b>start_date:</b> {start_str}<br>"
+                    hover_text += f"<b>end_date:</b> {end_str}<br>"
                     hover_text += f"<b>event_type:</b> {row['event_type']}"
                     hover_data.append(hover_text)
-                    
+
         except Exception as e:
             print(f"Error processing event info: {e}")
             # === Complete Fallback ===
             # Create basic hover data for all rows if processing completely fails
-            hover_data = [f"<b>start_date:</b> {row['start_date'].strftime('%Y-%m-%d')}<br><b>end_date:</b> {row['end_date'].strftime('%Y-%m-%d')}<br><b>event_type:</b> {row['event_type']}" 
+            hover_data = [f"<b>start_date:</b> {row['start_date'].strftime('%Y-%m-%d') if pd.notna(row['start_date']) else 'N/A'}<br><b>end_date:</b> {row['end_date'].strftime('%Y-%m-%d') if pd.notna(row['end_date']) else 'N/A'}<br><b>event_type:</b> {row['event_type']}"
                          for _, row in data.iterrows()]
     else:
         # === No Event Info Column ===
         # Create basic hover data when event_info column is missing
-        hover_data = [f"<b>start_date:</b> {row['start_date'].strftime('%Y-%m-%d')}<br><b>end_date:</b> {row['end_date'].strftime('%Y-%m-%d')}<br><b>event_type:</b> {row['event_type']}" 
+        hover_data = [f"<b>start_date:</b> {row['start_date'].strftime('%Y-%m-%d') if pd.notna(row['start_date']) else 'N/A'}<br><b>end_date:</b> {row['end_date'].strftime('%Y-%m-%d') if pd.notna(row['end_date']) else 'N/A'}<br><b>event_type:</b> {row['event_type']}"
                      for _, row in data.iterrows()]
     return hover_data
 
@@ -681,27 +685,33 @@ def create_monthly_timeline(app, selected_month, view_offset=0):
                     try:
                         # Parse and format event_info JSON
                         info = json.loads(row['event_info']) if isinstance(row['event_info'], str) else row['event_info']
-                        hover_text = f"<b>start_date:</b> {row['start_date'].strftime('%Y-%m-%d')}<br>"
-                        hover_text += f"<b>end_date:</b> {row['end_date'].strftime('%Y-%m-%d')}<br>"
-                        
+                        start_str = row['start_date'].strftime('%Y-%m-%d') if pd.notna(row['start_date']) else 'N/A'
+                        end_str = row['end_date'].strftime('%Y-%m-%d') if pd.notna(row['end_date']) else 'N/A'
+                        hover_text = f"<b>start_date:</b> {start_str}<br>"
+                        hover_text += f"<b>end_date:</b> {end_str}<br>"
+
                         for key, value in info.items():
                             if isinstance(value, str) and len(str(value)) > 40:
                                 wrapped_value = "<br>".join(textwrap.wrap(str(value), width=40))
                                 hover_text += f"<b>{key}:</b><br>{wrapped_value}<br>"
                             else:
                                 hover_text += f"<b>{key}:</b> {value}<br>"
-                        
+
                         hover_data.append(hover_text.rstrip('<br>'))
                     except:
                         # Fallback for JSON parsing errors
-                        hover_text = f"<b>start_date:</b> {row['start_date'].strftime('%Y-%m-%d')}<br>"
-                        hover_text += f"<b>end_date:</b> {row['end_date'].strftime('%Y-%m-%d')}<br>"
+                        start_str = row['start_date'].strftime('%Y-%m-%d') if pd.notna(row['start_date']) else 'N/A'
+                        end_str = row['end_date'].strftime('%Y-%m-%d') if pd.notna(row['end_date']) else 'N/A'
+                        hover_text = f"<b>start_date:</b> {start_str}<br>"
+                        hover_text += f"<b>end_date:</b> {end_str}<br>"
                         hover_text += f"<b>event_type:</b> {row['event_type']}"
                         hover_data.append(hover_text)
                 else:
                     # Basic hover text when no event_info available
-                    hover_text = f"<b>start_date:</b> {row['start_date'].strftime('%Y-%m-%d')}<br>"
-                    hover_text += f"<b>end_date:</b> {row['end_date'].strftime('%Y-%m-%d')}<br>"
+                    start_str = row['start_date'].strftime('%Y-%m-%d') if pd.notna(row['start_date']) else 'N/A'
+                    end_str = row['end_date'].strftime('%Y-%m-%d') if pd.notna(row['end_date']) else 'N/A'
+                    hover_text = f"<b>start_date:</b> {start_str}<br>"
+                    hover_text += f"<b>end_date:</b> {end_str}<br>"
                     hover_text += f"<b>event_type:</b> {row['event_type']}"
                     hover_data.append(hover_text)
         
@@ -838,8 +848,8 @@ def _serialize_patient_data(app):
             ibd_val = False
 
         events.append({
-            'start_date':     row['start_date'].strftime('%Y-%m-%dT%H:%M:%S'),
-            'end_date':       row['end_date'].strftime('%Y-%m-%dT%H:%M:%S'),
+            'start_date':     row['start_date'].strftime('%Y-%m-%dT%H:%M:%S') if pd.notna(row['start_date']) else '',
+            'end_date':       row['end_date'].strftime('%Y-%m-%dT%H:%M:%S') if pd.notna(row['end_date']) else '',
             'event_type':     str(row.get('event_type', '')),
             'ibd_related':    bool(ibd_val),
             'event_info':     event_info,
