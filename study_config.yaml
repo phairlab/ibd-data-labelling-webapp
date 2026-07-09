@@ -1,3 +1,5 @@
+# This file acts as a control panel for the webapp, instead of needing to chnge the python code for new adjustments,
+# someone can just edit this file.
 # Configuration for the RMT23345 timeline labeling webapp.
 # Edit this file to control which data sources are loaded and which
 # fields appear in the event hover tooltip — no code changes needed.
@@ -17,6 +19,7 @@
 # ─────────────────────────────────────────────────────────────────
 disease_detection:
   # Text keyword matching (used when R prep scripts have already converted codes to English)
+  #this is specifically for IBD
   keywords: "crohn|ulcerative|inflammatory bowel|ileitis|proctocolitis"
 
   # ICD code prefix matching (used when raw ICD codes are still in the CSV)
