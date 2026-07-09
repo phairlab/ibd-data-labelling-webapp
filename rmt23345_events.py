@@ -141,6 +141,28 @@ def _coalesce(a: pd.Series, b: pd.Series) -> pd.Series:
     return a.where(a.notna(), b)
 
 
+def _parse_col(series: pd.Series) -> pd.Series:
+    """Parse a date series, handling SAS formats automatically.
+
+    Detects two SAS formats:
+      22APR2018            → %d%b%Y
+      07NOV2017:00:00:00   → %d%b%Y:%H:%M:%S
+    Falls back to standard pd.to_datetime for all other formats.
+    """
+    if series.empty:
+        return pd.to_datetime(series, utc=True, errors="coerce")
+    sample = series.dropna().astype(str)
+    if not sample.empty:
+        s = sample.iloc[0]
+        if len(s) >= 7 and s[2:5].isalpha():
+            if ":" in s:
+                fmt = "%d%b%Y:%H:%M:%S"
+            else:
+                fmt = "%d%b%Y"
+            return pd.to_datetime(series, format=fmt, errors="coerce").dt.tz_localize("UTC")
+    return pd.to_datetime(series, utc=True, errors="coerce")
+
+
 def _resolve_dates(df: pd.DataFrame, start_col: str, end_cols) -> tuple:
     """Parse start/end datetimes from df, both assumed UTC.
 
@@ -148,16 +170,15 @@ def _resolve_dates(df: pd.DataFrame, start_col: str, end_cols) -> tuple:
       - str  : single column; end stays NaT if the column is missing/null
       - list : try each column in order; if all missing → start + 23:59
     """
-    start_dt = pd.to_datetime(
+    start_dt = _parse_col(
         df[start_col] if start_col in df.columns else pd.Series(pd.NaT, index=df.index),
-        utc=True, errors="coerce",
     )
 
     if isinstance(end_cols, list):
         end_dt = None
         for col in end_cols:
             if col in df.columns:
-                candidate = pd.to_datetime(df[col], utc=True, errors="coerce")
+                candidate = _parse_col(df[col])
                 end_dt = candidate if end_dt is None else _coalesce(end_dt, candidate)
         if end_dt is None:
             end_dt = start_dt.copy()
@@ -168,7 +189,7 @@ def _resolve_dates(df: pd.DataFrame, start_col: str, end_cols) -> tuple:
             end_dt[missing] = start_dt[missing] + pd.Timedelta(hours=23, minutes=59)
     else:
         col = end_cols if end_cols and end_cols in df.columns else start_col
-        end_dt = pd.to_datetime(df[col], utc=True, errors="coerce")
+        end_dt = _parse_col(df[col])
 
     return start_dt, end_dt
 
@@ -346,6 +367,7 @@ def load_di_events(path: str, fields: list = None, start_col: str = None, end_co
                    keywords: str = None, icd9_dict: dict = None, icd10_dict: dict = None,
                    biologic_atc_codes=None, steroid_atc_codes=None) -> pd.DataFrame:
     df = pd.read_csv(path, low_memory=False)
+    df.columns = df.columns.str.upper()
     _check_config_columns(df, fields, "DI")
     if fields is not None:
         info = _build_event_info(df, fields)
