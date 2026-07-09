@@ -4,9 +4,7 @@ import plotly.graph_objects as go
 import json
 import os
 import textwrap
-from datetime import datetime, timedelta
-import numpy as np
-import random
+from datetime import datetime
 import yaml
 from rmt23345_events import load_all_events
 
@@ -76,90 +74,30 @@ class PatientTimelineApp:
     
     def auto_load_data(self):
         """
-        Automatically load patient data from the specified directory.
-        
-        This method attempts to load data from a predefined CSV file. If the file
-        is not found or cannot be loaded, it falls back to generating sample data
-        for testing purposes.
-        
-        File Location: /data/external_ps/baumgart/BAUMGART_SHARED/Baumgart_IBD/Sacha/ibd_activity_viewer/data/
-        Target File: selected_events_mia_patients.csv
-        
-        Expected CSV Format:
-        - patient_id: Integer patient identifier
-        - start_date: Event start date (YYYY-MM-DD)
-        - end_date: Event end date (YYYY-MM-DD)
-        - event_type: Type of medical event (string)
-        - ibd_related: Boolean flag for IBD-related events
-        - event_info: JSON string with additional event details
-        - source_dataset: Data source identifier
+        Load patient data from the RMT23345 directory if one was specified.
+        If no directory is given, combined_data stays None — the user must
+        either provide --rmt23345-dir at startup or upload files via the UI.
         """
-        try:
-            # === Try RMT23345 cleaned CSVs first ===
-            if self.rmt23345_data_dir and os.path.isdir(self.rmt23345_data_dir):
-                try:
-                    study_config = _load_study_config()
-                    if study_config:
-                        enabled = study_config.get("sources", {}).get("enabled", [])
-                        print(f"study_config.yaml: loading sources {enabled}")
-                    print(f"Loading from RMT23345 directory: {self.rmt23345_data_dir}")
-                    df = load_all_events(self.rmt23345_data_dir, config=study_config)
-                    if len(df) > 0:
-                        df['start_date'] = pd.to_datetime(df['start_date'], utc=True, errors='coerce').dt.tz_localize(None)
-                        df['end_date']   = pd.to_datetime(df['end_date'],   utc=True, errors='coerce').dt.tz_localize(None)
-                        self.combined_data = df
-                        print(f"Loaded {len(df)} events from RMT23345 CSVs")
-                        self.apply_patient_filter()
-                        return
-                except Exception as e:
-                    print(f"Failed to load RMT23345 data: {e}, falling back...")
-
-            # === Define Data Location ===
-            # Set the repository path and data directory
-            repo_path = '/data/external_ps/baumgart/BAUMGART_SHARED/Baumgart_IBD/Sacha/ibd_activity_viewer'
-            data_dir = os.path.join(repo_path, 'data')
-            
-            # Specific file to load (can be modified to load different files)
-            target_file = 'selected_events_mia_patients.csv'
-            file_path = os.path.join(data_dir, target_file)
-            
-            # === Check File Existence ===
-            if not os.path.exists(file_path):
-                print(f"Target file not found: {file_path}")
-                print("Falling back to sample data generation...")
-                # Generate fake data for testing if real data is not available
-                self.combined_data = self.generate_fake_data(1000)
-                self.apply_patient_filter()
-                return
-            
-            # === Load Real Data ===
+        if self.rmt23345_data_dir and os.path.isdir(self.rmt23345_data_dir):
             try:
-                print(f"Loading: {target_file}")
-                df = pd.read_csv(file_path)
-                
-                # Convert date columns to pandas datetime objects for proper date handling
-                df['start_date'] = pd.to_datetime(df['start_date'])
-                df['end_date'] = pd.to_datetime(df['end_date'])
-                
-                self.combined_data = df
-                print(f"Successfully loaded {len(self.combined_data)} records from {target_file}")
-                
-                # Apply patient filtering based on command line arguments
-                self.apply_patient_filter()
-                
+                study_config = _load_study_config()
+                if study_config:
+                    enabled = study_config.get("sources", {}).get("enabled", [])
+                    print(f"study_config.yaml: loading sources {enabled}")
+                print(f"Loading from RMT23345 directory: {self.rmt23345_data_dir}")
+                df = load_all_events(self.rmt23345_data_dir, config=study_config)
+                if len(df) > 0:
+                    df['start_date'] = pd.to_datetime(df['start_date'], utc=True, errors='coerce').dt.tz_localize(None)
+                    df['end_date']   = pd.to_datetime(df['end_date'],   utc=True, errors='coerce').dt.tz_localize(None)
+                    self.combined_data = df
+                    print(f"Loaded {len(df)} events from RMT23345 CSVs")
+                    self.apply_patient_filter()
+                else:
+                    print("No events found in the specified directory.")
             except Exception as e:
-                print(f"Error loading {target_file}: {e}")
-                print("Falling back to sample data generation...")
-                # If CSV loading fails, generate sample data
-                self.combined_data = self.generate_fake_data(1000)
-                self.apply_patient_filter()
-                
-        except Exception as e:
-            print(f"Error auto-loading data: {e}")
-            print("Falling back to sample data generation...")
-            # Final fallback to sample data
-            self.combined_data = self.generate_fake_data(1000)
-            self.apply_patient_filter()
+                print(f"Failed to load RMT23345 data: {e}")
+        else:
+            print("No data directory specified. Use --rmt23345-dir or upload files via the UI.")
     
     def apply_patient_filter(self):
         """
@@ -226,89 +164,6 @@ class PatientTimelineApp:
         else:
             return []
     
-    def generate_fake_data(self, num_rows=1000):
-        """
-        Generate fake patient data for testing/demonstration purposes.
-        
-        This method creates realistic-looking medical event data when real data
-        is not available. The generated data includes various event types,
-        realistic date ranges, and JSON-formatted event information.
-        
-        Args:
-            num_rows (int): Approximate number of total events to generate
-        
-        Returns:
-            pd.DataFrame: Generated patient event data with required columns
-        """
-        # === Generate Patient IDs ===
-        # Create unique patient IDs (about 50 events per patient on average)
-        unique_patient_ids = np.random.randint(1, 1000, size=num_rows // 50)
-        
-        # === Generate Event Counts Per Patient ===
-        # Each patient gets a random number of events between 50-100
-        patient_event_counts = {patient_id: random.randint(50, 100) for patient_id in unique_patient_ids}
-        
-        # === Generate Events for Each Patient ===
-        data = []
-        for patient_id, event_count in patient_event_counts.items():
-            # === Generate Random Dates ===
-            # Create events within a realistic timeframe (2010-2022)
-            start_date_2010 = datetime(2010, 1, 1)
-            end_date_2022 = datetime(2022, 12, 31)
-            date_range_days = (end_date_2022 - start_date_2010).days
-
-            # Generate random start dates within the range
-            start_dates = [start_date_2010 + timedelta(days=random.randint(0, date_range_days)) for _ in range(event_count)]
-            # Generate end dates (0-10 days after start date)
-            end_dates = [start_date + timedelta(days=random.randint(0, 10)) for start_date in start_dates]
-
-            # === Ensure End Dates Don't Exceed Range ===
-            for i, end_date in enumerate(end_dates):
-                if end_date > end_date_2022:
-                    end_dates[i] = end_date_2022
-            
-            # === Generate Random Event Types ===
-            # These should match the real event types in your actual data
-            event_types = random.choices(
-                ['imaging', 'ambulatory_visit', 'hospitalization', 'medication_change', 'lab_test'], 
-                k=event_count
-            )
-            
-            # === Generate IBD-Related Flags ===
-            # Random boolean flags for IBD-related events
-            ibd_related = random.choices([True, False], k=event_count)
-            
-            # === Generate Event Information ===
-            # Create JSON strings with additional event details (mimics real data structure)
-            event_info = [
-                json.dumps({
-                    "Patient Age": random.randint(1, 100),
-                    "Patient Sex": random.choice(["Male", "Female"]),
-                    "Additional Info": f"Info {i}"
-                }) for i in range(event_count)
-            ]
-            
-            # === Generate Source Datasets ===
-            # Random data source identifiers (should match your real data sources)
-            source_datasets = random.choices(['DI', 'DAD', 'CLAIMS', 'PIN', 'LAB', 'NACRS'], k=event_count)
-            
-            # === Create Event Records ===
-            # Append data for this patient
-            for i in range(event_count):
-                data.append({
-                    'patient_id': patient_id,
-                    'start_date': start_dates[i],
-                    'end_date': end_dates[i],
-                    'event_type': event_types[i],
-                    'ibd_related': ibd_related[i],
-                    'event_info': event_info[i],
-                    'source_dataset': source_datasets[i]
-                })
-        
-        # === Return DataFrame ===
-        fake_data = pd.DataFrame(data)
-        return fake_data
-    
     def reload_data(self):
         """
         Reload data from the directory and update UI components.
@@ -353,6 +208,109 @@ class PatientTimelineApp:
         except Exception as e:
             return f"Failed to export data: {str(e)}"
     
+    def load_uploaded_data(self, amb_file, dad_file, lab_file, pin_file, clm_file, di_file):
+        """
+        Accept up to 6 uploaded CSV files (one per RMT23345 source), copy them into
+        the uploaded_data/ folder with the expected filenames, then call load_all_events()
+        to rebuild combined_data.
+
+        Gradio passes the path of a temporary file when the user uploads, or None when
+        a slot is left empty.  We copy only the non-None files so that any sources the
+        user did not upload are simply skipped.
+
+        Returns:
+            tuple: (upload_status, data_status, patient_dropdown_update, chart_info)
+        """
+        import shutil
+        import gradio as gr
+
+        # Map each slot to the canonical RMT23345 filename
+        slot_map = {
+            "AMB": amb_file,
+            "DAD": dad_file,
+            "LAB": lab_file,
+            "PIN": pin_file,
+            "CLM": clm_file,
+            "DI":  di_file,
+        }
+
+        # uploaded_data/ lives at the project root (same directory as this file)
+        project_root   = os.path.dirname(os.path.abspath(__file__))
+        upload_dir     = os.path.join(project_root, "uploaded_data")
+        os.makedirs(upload_dir, exist_ok=True)
+
+        # Clear the folder so stale files from a previous upload are gone
+        for old_file in os.listdir(upload_dir):
+            old_path = os.path.join(upload_dir, old_file)
+            if os.path.isfile(old_path):
+                os.remove(old_path)
+
+        uploaded_sources = []
+        for source, tmp_path in slot_map.items():
+            if tmp_path is None:
+                continue
+            # Gradio may pass a file object or a plain path string
+            src = tmp_path if isinstance(tmp_path, str) else tmp_path.name
+            dest = os.path.join(upload_dir, f"RMT23345_{source}.csv")
+            try:
+                shutil.copy2(src, dest)
+                uploaded_sources.append(source)
+            except Exception as e:
+                msg = f"Could not copy {source} file: {e}"
+                status = self.get_data_status()
+                patient_choices = self.get_patient_choices()
+                return (
+                    msg,
+                    status,
+                    gr.update(choices=patient_choices, value=patient_choices[0] if patient_choices else None),
+                    status,
+                )
+
+        if not uploaded_sources:
+            return (
+                "No files were uploaded. Please select at least one CSV file.",
+                self.get_data_status(),
+                gr.update(),
+                self.get_data_status(),
+            )
+
+        # Load data from the upload folder
+        try:
+            study_config = _load_study_config()
+            df = load_all_events(upload_dir, config=study_config)
+            if len(df) == 0:
+                return (
+                    f"Files copied ({', '.join(uploaded_sources)}) but no events could be parsed. "
+                    "Check that the files contain the expected columns.",
+                    self.get_data_status(),
+                    gr.update(),
+                    self.get_data_status(),
+                )
+            df['start_date'] = pd.to_datetime(df['start_date'], utc=True, errors='coerce').dt.tz_localize(None)
+            df['end_date']   = pd.to_datetime(df['end_date'],   utc=True, errors='coerce').dt.tz_localize(None)
+            self.combined_data = df
+            self.apply_patient_filter()
+        except Exception as e:
+            return (
+                f"Error loading uploaded files: {e}",
+                self.get_data_status(),
+                gr.update(),
+                self.get_data_status(),
+            )
+
+        patient_choices = self.get_patient_choices()
+        data_status     = self.get_data_status()
+        upload_msg      = (
+            f"Loaded {len(self.combined_data):,} events from: {', '.join(uploaded_sources)}. "
+            f"{len(patient_choices)} patients available."
+        )
+        return (
+            upload_msg,
+            data_status,
+            gr.update(choices=patient_choices, value=patient_choices[0] if patient_choices else None),
+            data_status,
+        )
+
     def load_patient_timeline(self, patient_id, ibd_filter="All Events"):
         """
         Load timeline for selected patient with IBD filtering.
