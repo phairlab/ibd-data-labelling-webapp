@@ -17,6 +17,7 @@
 
 import gradio as gr
 import argparse
+import os
 import sys
 from patient_timeline_webapp import PatientTimelineApp
 from monthly_labelling import add_monthly_labelling_methods
@@ -77,12 +78,6 @@ def parse_arguments():
     admin.add_argument('--rmt23345-dir', type=str, default=None, dest='rmt23345_dir',
                        help='Directory containing cleaned RMT23345_*.csv files')
     
-    # DEVELOPMENT MODE: Sample data for testing/development
-    dev = subparsers.add_parser('dev', help='Development mode with sample data')
-    dev.add_argument('--patients', type=int, default=50, help='Number of sample patients (default: 50)')
-    dev.add_argument('--rmt23345-dir', type=str, default=None, dest='rmt23345_dir',
-                     help='Directory containing cleaned RMT23345_*.csv files')
-
     return parser.parse_args()
 
 def create_app_with_args():
@@ -117,12 +112,6 @@ def create_app_with_args():
     elif args.command == 'admin':
         return PatientTimelineApp(patient_range=None, group_name="Admin (All Patients)",
                                   rmt23345_data_dir=args.rmt23345_dir)
-    elif args.command == 'dev':
-        app = PatientTimelineApp(patient_range=None, group_name="Development Mode",
-                                 rmt23345_data_dir=args.rmt23345_dir)
-        if not args.rmt23345_dir:
-            app.combined_data = app.generate_fake_data(args.patients * 20)
-        return app
     else:
         # No valid command provided - show help and exit
         print("No command specified. Available commands:")
@@ -131,7 +120,6 @@ def create_app_with_args():
         print("  python main.py group-c    # Access patients 201-300")
         print("  python main.py custom --start 1 --end 50 --name 'My Group'")
         print("  python main.py admin      # Access all patients")
-        print("  python main.py dev        # Development mode with sample data")
         sys.exit(1)
 
 def create_interface():
@@ -346,7 +334,7 @@ def create_interface():
         # This tab shows current data status and provides export functionality
         with gr.Tab("Data Overview"):
             gr.Markdown("### Current Data Status")
-            
+
             with gr.Row():
                 # Left column: Data information and reload functionality
                 with gr.Column():
@@ -355,7 +343,7 @@ def create_interface():
                     data_status = gr.Textbox(label="Status", value=app.get_data_status(), interactive=False)
                     # Button to reload data from the file system
                     reload_data_btn = gr.Button("Reload Data", variant="primary")
-                
+
                 # Right column: Data export functionality
                 with gr.Column():
                     gr.Markdown("**Export Current Data**")
@@ -365,6 +353,30 @@ def create_interface():
                     export_btn = gr.Button("Export Data")
                     # Status message for export operations
                     export_status = gr.Textbox(label="Export Status", value="", interactive=False)
+
+            gr.Markdown("---")
+            gr.Markdown("### Upload Patient Data Files")
+            gr.Markdown("Click a source to pick its CSV, then press **Load**. Upload only what you have.")
+
+            with gr.Row():
+                upload_amb = gr.UploadButton("↑ AMB", file_types=[".csv"], size="sm")
+                upload_dad = gr.UploadButton("↑ DAD", file_types=[".csv"], size="sm")
+                upload_lab = gr.UploadButton("↑ LAB", file_types=[".csv"], size="sm")
+                upload_pin = gr.UploadButton("↑ PIN", file_types=[".csv"], size="sm")
+                upload_clm = gr.UploadButton("↑ CLM", file_types=[".csv"], size="sm")
+                upload_di  = gr.UploadButton("↑ DI",  file_types=[".csv"], size="sm")
+
+            with gr.Row():
+                amb_name = gr.Textbox(value="no file", show_label=False, interactive=False, max_lines=1, lines=1)
+                dad_name = gr.Textbox(value="no file", show_label=False, interactive=False, max_lines=1, lines=1)
+                lab_name = gr.Textbox(value="no file", show_label=False, interactive=False, max_lines=1, lines=1)
+                pin_name = gr.Textbox(value="no file", show_label=False, interactive=False, max_lines=1, lines=1)
+                clm_name = gr.Textbox(value="no file", show_label=False, interactive=False, max_lines=1, lines=1)
+                di_name  = gr.Textbox(value="no file", show_label=False, interactive=False, max_lines=1, lines=1)
+
+            with gr.Row():
+                upload_btn    = gr.Button("Load Uploaded Files", variant="primary")
+                upload_status = gr.Textbox(label="Upload Status", value="", interactive=False, lines=1)
         
         # ====================================================================
         # TAB 2: TIMELINE VIEWER
@@ -572,8 +584,6 @@ def create_interface():
                 - `uv run python main.py group-c` - Access patients 201-300
                 - `uv run python main.py custom --start X --end Y --name "Group Name"` - Custom range
                 - `uv run python main.py admin` - Access all patients (admin mode)
-                - `uv run python main.py dev` - Development mode with sample data
-                - **Data Directory**: `/data/external_ps/baumgart/BAUMGART_SHARED/Baumgart_IBD/Sacha/ibd_activity_viewer/data`
                 - **Save Directories**: Group-specific folders (`groupa_saved_flares/`, `groupb_saved_flares/`, etc.)
                 - **Reload Data**: Use the "Reload Data" button to refresh data from the directory
                 - **Export Current Data**: Save the currently loaded data to CSV or Excel format
@@ -581,8 +591,7 @@ def create_interface():
                 ### 2. Running on Remote Server
                 **Terminal 1 - Start Application**:
                 ```bash
-                cd /data/baumgart/BAUMGART_SHARED/Baumgart_IBD/Mia/ibd-data-labelling-webapp
-                uv run python main.py group-a
+                uv run python main.py admin --rmt23345-dir /path/to/data
 
                 **Terminal 2 - SSH Tunnel**:
                 ```bash
@@ -663,9 +672,6 @@ def create_interface():
                 # Administrator viewing all patients
                 uv run python main.py admin
 
-                # Development/testing with sample data
-                uv run python main.py dev --patients 50
-                            
                 ###10. Troubleshooting
                 - **No patients visible**: Check that your command provides access to patients in the data range
                 - **Missing events**: Verify the IBD filter setting matches what you want to see
@@ -693,7 +699,28 @@ def create_interface():
             inputs=[export_format],  # Use selected format (CSV/Excel)
             outputs=[export_status]  # Show export status message
         )
-        
+
+        # Upload button: saves uploaded files, validates, reloads combined_data
+        upload_btn.click(
+            app.load_uploaded_data,
+            inputs=[upload_amb, upload_dad, upload_lab, upload_pin, upload_clm, upload_di],
+            outputs=[upload_status, data_status, patient_dropdown, chart_info]
+        )
+
+        # Show filename beneath each upload button as soon as a file is selected
+        def _fname(f):
+            if f is None:
+                return "no file"
+            p = f if isinstance(f, str) else f.name
+            return os.path.basename(p)
+
+        upload_amb.upload(_fname, inputs=upload_amb, outputs=amb_name)
+        upload_dad.upload(_fname, inputs=upload_dad, outputs=dad_name)
+        upload_lab.upload(_fname, inputs=upload_lab, outputs=lab_name)
+        upload_pin.upload(_fname, inputs=upload_pin, outputs=pin_name)
+        upload_clm.upload(_fname, inputs=upload_clm, outputs=clm_name)
+        upload_di.upload(_fname,  inputs=upload_di,  outputs=di_name)
+
         # ====================================================================
         # EVENT HANDLERS - TIMELINE VIEWER TAB
         # ====================================================================
