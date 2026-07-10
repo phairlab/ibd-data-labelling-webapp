@@ -107,22 +107,22 @@ display:
   AMB:
     - column: INST
       label: "Hospital"
-    - column: DXCODE1
-      label: "Diagnosis"
-    - column: PROCCODE1
-      label: "Procedure"
+    - column: CACS_CODE
+      label: "Visit Category"
     - column: ABSTRACT_TYPE
       label: "Visit Type"
+    - column: TEXT_SUPERFEATURE
+      label: "Details"
 
   DAD:
     - column: INST
       label: "Hospital"
-    - column: DXCODE1
-      label: "Diagnosis"
     - column: CMG
       label: "CMG"
     - column: ADMITCAT
       label: "Admit Category"
+    - column: TEXT_SUPERFEATURE
+      label: "Details"
 
   LAB:
     - column: TEST_NM
@@ -135,24 +135,18 @@ display:
       label: "Abnormal"
 
   PIN:
-    - column: INGREDIENT
-      label: "Drug"
-    - column: STRENGTH
-      label: "Strength"
-    - column: STRENGTH_UNIT
-      label: "Unit"
-    - column: BRAND_NAME
-      label: "Brand"
+    - column: SUPP_DRUG_ATC_CODE
+      label: "ATC Code"
+    - column: DRUG_DIN
+      label: "Drug ID"
+    - column: DSPN_AMT_QTY
+      label: "Quantity"
+    - column: DSPN_DAY_SUPPLY_QTY
+      label: "Days Supply"
 
   CLM:
-    - column: HLTH_SRVC_CCPX_CODE
-      label: "Service Code"
-    - column: DXCODE
-      label: "Diagnosis"
-    - column: SECTOR
-      label: "Sector"
-    - column: DOCTOR_CLASS
-      label: "Doctor Type"
+    - column: TEXT_SUPERFEATURE
+      label: "Claims"
 
   DI:
     - column: CPEL_CATLG_DESC
