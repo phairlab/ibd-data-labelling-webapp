@@ -355,28 +355,16 @@ def create_interface():
                     export_status = gr.Textbox(label="Export Status", value="", interactive=False)
 
             gr.Markdown("---")
-            gr.Markdown("### Upload Patient Data Files")
-            gr.Markdown("Click a source to pick its CSV, then press **Load**. Upload only what you have.")
+            gr.Markdown("### Upload Study Config")
+            gr.Markdown("Upload your `study_config.yaml` with paths to your data files on this server.")
 
             with gr.Row():
-                upload_amb = gr.UploadButton("↑ AMB", file_types=[".csv"], size="sm")
-                upload_dad = gr.UploadButton("↑ DAD", file_types=[".csv"], size="sm")
-                upload_lab = gr.UploadButton("↑ LAB", file_types=[".csv"], size="sm")
-                upload_pin = gr.UploadButton("↑ PIN", file_types=[".csv"], size="sm")
-                upload_clm = gr.UploadButton("↑ CLM", file_types=[".csv"], size="sm")
-                upload_di  = gr.UploadButton("↑ DI",  file_types=[".csv"], size="sm")
+                upload_config = gr.UploadButton("↑ Upload study_config.yaml", file_types=[".yaml", ".yml"], size="sm")
+                config_name   = gr.Textbox(value="no file", show_label=False, interactive=False, max_lines=1, lines=1)
 
             with gr.Row():
-                amb_name = gr.Textbox(value="no file", show_label=False, interactive=False, max_lines=1, lines=1)
-                dad_name = gr.Textbox(value="no file", show_label=False, interactive=False, max_lines=1, lines=1)
-                lab_name = gr.Textbox(value="no file", show_label=False, interactive=False, max_lines=1, lines=1)
-                pin_name = gr.Textbox(value="no file", show_label=False, interactive=False, max_lines=1, lines=1)
-                clm_name = gr.Textbox(value="no file", show_label=False, interactive=False, max_lines=1, lines=1)
-                di_name  = gr.Textbox(value="no file", show_label=False, interactive=False, max_lines=1, lines=1)
-
-            with gr.Row():
-                upload_btn    = gr.Button("Load Uploaded Files", variant="primary")
-                upload_status = gr.Textbox(label="Upload Status", value="", interactive=False, lines=1)
+                load_config_btn = gr.Button("Load Config & Data", variant="primary")
+                config_status   = gr.Textbox(label="Status", value="", interactive=False, lines=1)
         
         # ====================================================================
         # TAB 2: TIMELINE VIEWER
@@ -700,26 +688,20 @@ def create_interface():
             outputs=[export_status]  # Show export status message
         )
 
-        # Upload button: saves uploaded files, validates, reloads combined_data
-        upload_btn.click(
-            app.load_uploaded_data,
-            inputs=[upload_amb, upload_dad, upload_lab, upload_pin, upload_clm, upload_di],
-            outputs=[upload_status, data_status, patient_dropdown, chart_info]
+        # Config YAML upload: reads paths from uploaded YAML and loads data directly
+        load_config_btn.click(
+            app.load_config_file,
+            inputs=[upload_config],
+            outputs=[config_status, data_status, patient_dropdown, chart_info]
         )
 
-        # Show filename beneath each upload button as soon as a file is selected
         def _fname(f):
             if f is None:
                 return "no file"
             p = f if isinstance(f, str) else f.name
             return os.path.basename(p)
 
-        upload_amb.upload(_fname, inputs=upload_amb, outputs=amb_name)
-        upload_dad.upload(_fname, inputs=upload_dad, outputs=dad_name)
-        upload_lab.upload(_fname, inputs=upload_lab, outputs=lab_name)
-        upload_pin.upload(_fname, inputs=upload_pin, outputs=pin_name)
-        upload_clm.upload(_fname, inputs=upload_clm, outputs=clm_name)
-        upload_di.upload(_fname,  inputs=upload_di,  outputs=di_name)
+        upload_config.upload(_fname, inputs=upload_config, outputs=config_name)
 
         # ====================================================================
         # EVENT HANDLERS - TIMELINE VIEWER TAB
