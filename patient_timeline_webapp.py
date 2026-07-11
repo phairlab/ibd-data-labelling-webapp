@@ -97,10 +97,10 @@ class PatientTimelineApp:
             except Exception as e:
                 print(f"Failed to load RMT23345 data: {e}")
         else:
-            print("No data directory specified. Use --rmt23345-dir or upload files via the UI.")
+            print("No data directory specified. Use --rmt23345-dir")
     
     def apply_patient_filter(self):
-        """
+        """no but my 
         Apply patient range filtering based on command line arguments.
         
         This method filters the loaded data to only include patients within
@@ -208,80 +208,43 @@ class PatientTimelineApp:
         except Exception as e:
             return f"Failed to export data: {str(e)}"
     
-    def load_uploaded_data(self, amb_file, dad_file, lab_file, pin_file, clm_file, di_file):
+    def load_config_file(self, config_file):
         """
-        Accept up to 6 uploaded CSV files (one per RMT23345 source), copy them into
-        the uploaded_data/ folder with the expected filenames, then call load_all_events()
-        to rebuild combined_data.
-
-        Gradio passes the path of a temporary file when the user uploads, or None when
-        a slot is left empty.  We copy only the non-None files so that any sources the
-        user did not upload are simply skipped.
+        Accept an uploaded study_config.yaml, read it, and load data from
+        the file paths specified in its sources section. Paths may be absolute
+        (pointing anywhere on the server) or relative (resolved against data_dir).
 
         Returns:
-            tuple: (upload_status, data_status, patient_dropdown_update, chart_info)
+            tuple: (status_msg, data_status, patient_dropdown_update, chart_info)
         """
-        import shutil
         import gradio as gr
 
-        # Map each slot to the canonical RMT23345 filename
-        slot_map = {
-            "AMB": amb_file,
-            "DAD": dad_file,
-            "LAB": lab_file,
-            "PIN": pin_file,
-            "CLM": clm_file,
-            "DI":  di_file,
-        }
-
-        # uploaded_data/ lives at the project root (same directory as this file)
-        project_root   = os.path.dirname(os.path.abspath(__file__))
-        upload_dir     = os.path.join(project_root, "uploaded_data")
-        os.makedirs(upload_dir, exist_ok=True)
-
-        # Clear the folder so stale files from a previous upload are gone
-        for old_file in os.listdir(upload_dir):
-            old_path = os.path.join(upload_dir, old_file)
-            if os.path.isfile(old_path):
-                os.remove(old_path)
-
-        uploaded_sources = []
-        for source, tmp_path in slot_map.items():
-            if tmp_path is None:
-                continue
-            # Gradio may pass a file object or a plain path string
-            src = tmp_path if isinstance(tmp_path, str) else tmp_path.name
-            dest = os.path.join(upload_dir, f"RMT23345_{source}.csv")
-            try:
-                shutil.copy2(src, dest)
-                uploaded_sources.append(source)
-            except Exception as e:
-                msg = f"Could not copy {source} file: {e}"
-                status = self.get_data_status()
-                patient_choices = self.get_patient_choices()
-                return (
-                    msg,
-                    status,
-                    gr.update(choices=patient_choices, value=patient_choices[0] if patient_choices else None),
-                    status,
-                )
-
-        if not uploaded_sources:
+        if config_file is None:
             return (
-                "No files were uploaded. Please select at least one CSV file.",
+                "No config file selected.",
                 self.get_data_status(),
                 gr.update(),
                 self.get_data_status(),
             )
 
-        # Load data from the upload folder
+        src = config_file if isinstance(config_file, str) else config_file.name
+
         try:
-            study_config = _load_study_config()
-            df = load_all_events(upload_dir, config=study_config)
+            with open(src, 'r') as f:
+                uploaded_config = yaml.safe_load(f) or {}
+        except Exception as e:
+            return (
+                f"Failed to read config file: {e}",
+                self.get_data_status(),
+                gr.update(),
+                self.get_data_status(),
+            )
+
+        try:
+            df = load_all_events(data_dir=self.rmt23345_data_dir, config=uploaded_config)
             if len(df) == 0:
                 return (
-                    f"Files copied ({', '.join(uploaded_sources)}) but no events could be parsed. "
-                    "Check that the files contain the expected columns.",
+                    "Config loaded but no events found. Check that the file paths in your YAML exist on this server.",
                     self.get_data_status(),
                     gr.update(),
                     self.get_data_status(),
@@ -292,7 +255,7 @@ class PatientTimelineApp:
             self.apply_patient_filter()
         except Exception as e:
             return (
-                f"Error loading uploaded files: {e}",
+                f"Error loading data from config: {e}",
                 self.get_data_status(),
                 gr.update(),
                 self.get_data_status(),
@@ -300,12 +263,8 @@ class PatientTimelineApp:
 
         patient_choices = self.get_patient_choices()
         data_status     = self.get_data_status()
-        upload_msg      = (
-            f"Loaded {len(self.combined_data):,} events from: {', '.join(uploaded_sources)}. "
-            f"{len(patient_choices)} patients available."
-        )
         return (
-            upload_msg,
+            f"Loaded {len(self.combined_data):,} events for {len(patient_choices)} patients.",
             data_status,
             gr.update(choices=patient_choices, value=patient_choices[0] if patient_choices else None),
             data_status,
