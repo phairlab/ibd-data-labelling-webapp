@@ -9,8 +9,8 @@
 # Controls how events are flagged as "disease-related" on the timeline.
 # All values here are IBD defaults — change them for a different disease.
 #
-# `keywords`     — regex used when diagnosis_format is "text" (after R prep).
-# `icd_prefixes` — code prefixes used when diagnosis_format is "icd_code".
+# `keywords`     — regex for keyword matching in event descriptions (after R prep).
+# `icd_prefixes` — ICD code prefixes for disease detection.
 #                  ICD-10 starts with a letter (K50), ICD-9 starts with a digit (555).
 # `icd9_dictionary`  / `icd10_dictionary` — paths to lookup CSVs so raw codes are
 #                  shown as "K500 - Crohn disease of small intestine" in the tooltip.
@@ -18,11 +18,9 @@
 # `biologic_atc_codes` / `steroid_atc_codes` — ATC drug codes for prescription detection.
 # ─────────────────────────────────────────────────────────────────
 disease_detection:
-  # Text keyword matching (used when R prep scripts have already converted codes to English)
-  #this is specifically for IBD
+  # Text keyword matching in event descriptions — IBD defaults below
   keywords: "crohn|ulcerative|inflammatory bowel|ileitis|proctocolitis"
 
-  # ICD code prefix matching (used when raw ICD codes are still in the CSV)
   icd_prefixes:
     - K50    # ICD-10: Crohn's disease
     - K51    # ICD-10: Ulcerative colitis
@@ -53,48 +51,42 @@ disease_detection:
 # ─────────────────────────────────────────────────────────────────
 # Sources to load.
 # Comment out any source block you don't need to reduce server load.
-# `file`             — CSV filename inside the data directory.
-# `start_date`       — column used as the event start time (assumed UTC).
-# `end_date`         — column used as the event end time (assumed UTC).
-#                      Use a list to try columns in order; if all are
-#                      missing the end time falls back to 23:59 same day.
-# `diagnosis_format` — "text" if R prep scripts have already converted
-#                      ICD codes to English (default).
-#                      "icd_code" if the CSV still has raw codes (e.g. K50.0).
+# `file`        — absolute path to the CSV on this server.
+# `start_date`  — column used as the event start time.
+# `end_date`    — column used as the event end time.
+#                 Use a list to try columns in order; if all are
+#                 missing the end time falls back to 23:59 same day.
 # ─────────────────────────────────────────────────────────────────
 sources:
   AMB:
-    file: RMT23345_AMB.csv
+    file: /data/baumgart/BAUMGART_SHARED/IBD_timeline_labeling/sanika3/sanika-data/RMT23345_AMB.csv
     start_date: ArriveDt
     end_date:
       - DepartDt
       - DispDt
-    diagnosis_format: text
 
   DAD:
-    file: RMT23345_DAD.csv
+    file: /data/baumgart/BAUMGART_SHARED/IBD_timeline_labeling/sanika3/sanika-data/RMT23345_DAD.csv
     start_date: ADMITDATE
     end_date: DISDATE
-    diagnosis_format: text
 
   LAB:
-    file: RMT23345_LAB.csv
+    file: /data/baumgart/BAUMGART_SHARED/IBD_timeline_labeling/sanika3/sanika-data/RMT23345_LAB.csv
     start_date: verifyDt
     end_date: verifyDt
 
   PIN:
-    file: RMT23345_PIN.csv
+    file: /data/baumgart/BAUMGART_SHARED/IBD_timeline_labeling/sanika3/sanika-data/RMT23345_PIN.csv
     start_date: DSPN_DATE
     end_date: DSPN_DATE
 
   CLM:
-    file: RMT23345_CLM.csv
+    file: /data/baumgart/BAUMGART_SHARED/IBD_timeline_labeling/sanika3/sanika-data/RMT23345_CLM.csv
     start_date: SE_START_DATE
     end_date: SE_END_DATE
-    diagnosis_format: text
 
   DI:
-    file: RMT23345_DI.csv
+    file: /data/baumgart/BAUMGART_SHARED/IBD_timeline_labeling/sanika3/sanika-data/RMT23345_DI.csv
     start_date: SVC_DT
     end_date: SVC_DT
 
