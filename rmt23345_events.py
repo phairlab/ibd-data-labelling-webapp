@@ -299,17 +299,17 @@ def load_pin_events(path: str, fields: list = None, start_col: str = None, end_c
     df = pd.read_csv(path, low_memory=False)
     _check_config_columns(df, fields, "PIN")
     atc         = _safe_col(df, "SUPP_DRUG_ATC_CODE").fillna("")
-    maintenance = _safe_col(df, "MAINTENANCE")
-    strd_flare  = _safe_col(df, "STRD_FLARE_DOSE").fillna(0)
+    maintenance = pd.to_numeric(_safe_col(df, "MAINTENANCE"), errors="coerce").fillna(-1)
+    strd_flare  = pd.to_numeric(_safe_col(df, "STRD_FLARE_DOSE"), errors="coerce").fillna(0)
 
     biologics     = biologic_atc_codes if biologic_atc_codes is not None else _DEFAULT_BIOLOGICS
     steroids      = steroid_atc_codes  if steroid_atc_codes  is not None else _DEFAULT_STEROIDS
     is_biologic   = atc.isin(biologics)
-    is_strd_flare = atc.isin(steroids) & strd_flare.astype(float).eq(1)
+    is_strd_flare = atc.isin(steroids) & strd_flare.eq(1)
 
     specific_type = pd.Series("Prescription", index=df.index)
-    specific_type[is_biologic & maintenance.fillna(-1).astype(float).eq(0)] = "Biologic (Induction)"
-    specific_type[is_biologic & maintenance.fillna(-1).astype(float).eq(1)] = "Biologic (Maintenance)"
+    specific_type[is_biologic & maintenance.eq(0)] = "Biologic (Induction)"
+    specific_type[is_biologic & maintenance.eq(1)] = "Biologic (Maintenance)"
     specific_type[is_strd_flare] = "Corticosteroid (Flare)"
 
     if fields is not None:
@@ -339,10 +339,10 @@ def load_clm_events(path: str, fields: list = None, start_col: str = None, end_c
                     biologic_atc_codes=None, steroid_atc_codes=None) -> pd.DataFrame:
     df = pd.read_csv(path, low_memory=False)
     _check_config_columns(df, fields, "CLM")
-    dxcode = _safe_col(df, "DXCODE").fillna("")
+    dxcode = _safe_col(df, "HLTH_DX_ICD9X_CODE_1").fillna("")
     if dx_format == "icd_code" and (icd9_dict or icd10_dict):
         df = df.copy()
-        df["DXCODE"] = enrich_icd_codes(dxcode, icd9_dict or {}, icd10_dict or {})
+        df["HLTH_DX_ICD9X_CODE_1"] = enrich_icd_codes(dxcode, icd9_dict or {}, icd10_dict or {})
     if fields is not None:
         info = _build_event_info(df, fields)
     else:
@@ -405,15 +405,17 @@ _EMPTY = pd.DataFrame(columns=[
 
 
 def load_all_events(
-    data_dir: str,
+    data_dir: Optional[str] = None,
     patient_id: Optional[str] = None,
     sources: Optional[list] = None,
     config: Optional[dict] = None,
 ) -> pd.DataFrame:
-    """Load available cleaned RMT23345 CSVs from data_dir and return combined events.
+    """Load available cleaned RMT23345 CSVs and return combined events.
 
     Args:
-        data_dir:   Directory containing RMT23345_AMB.csv, RMT23345_DAD.csv, etc.
+        data_dir:   Directory containing RMT23345_*.csv files. Used only when a
+                    source's `file:` key is a relative filename. Pass None when all
+                    paths in the config are absolute.
         patient_id: If given, return only events for this patient.
         sources:    Subset of ["AMB","DAD","LAB","PIN","CLM","DI"]. Overrides config.
         config:     Dict loaded from study_config.yaml. Controls which sources load
@@ -458,8 +460,15 @@ def load_all_events(
 
     for source in to_load:
         src_cfg   = cfg_sources.get(source, {})
-        filename  = src_cfg.get("file", f"RMT23345_{source}.csv")
-        path      = Path(data_dir) / filename
+        filename = src_cfg.get("file", f"RMT23345_{source}.csv")
+        p = Path(filename)
+        if p.is_absolute():
+            path = p
+        elif data_dir:
+            path = Path(data_dir) / filename
+        else:
+            print(f"[rmt23345_events] {source}: relative path but no data_dir — skipping")
+            continue
         if not path.exists():
             continue
         fields    = cfg_display.get(source)
