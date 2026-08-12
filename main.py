@@ -17,6 +17,7 @@
 
 import gradio as gr
 import argparse
+import os
 import sys
 from patient_timeline_webapp import PatientTimelineApp
 from monthly_labelling import add_monthly_labelling_methods
@@ -47,29 +48,35 @@ def parse_arguments():
     group_a = subparsers.add_parser('group-a', help='Access patients 1-100')
     group_a.add_argument('--start', type=int, default=1, help='Start patient ID (default: 1)')
     group_a.add_argument('--end', type=int, default=100, help='End patient ID (default: 100)')
-    
+    group_a.add_argument('--rmt23345-dir', type=str, default=None, dest='rmt23345_dir',
+                         help='Directory containing cleaned RMT23345_*.csv files')
+
     # GROUP B: Patients 101-200 (e.g., for Research Team B)
     group_b = subparsers.add_parser('group-b', help='Access patients 101-200')
     group_b.add_argument('--start', type=int, default=101, help='Start patient ID (default: 101)')
     group_b.add_argument('--end', type=int, default=200, help='End patient ID (default: 200)')
-    
+    group_b.add_argument('--rmt23345-dir', type=str, default=None, dest='rmt23345_dir',
+                         help='Directory containing cleaned RMT23345_*.csv files')
+
     # GROUP C: Patients 201-300 (e.g., for Clinical Team)
     group_c = subparsers.add_parser('group-c', help='Access patients 201-300')
     group_c.add_argument('--start', type=int, default=201, help='Start patient ID (default: 201)')
     group_c.add_argument('--end', type=int, default=300, help='End patient ID (default: 300)')
-    
+    group_c.add_argument('--rmt23345-dir', type=str, default=None, dest='rmt23345_dir',
+                         help='Directory containing cleaned RMT23345_*.csv files')
+
     # CUSTOM RANGE: For specific research projects or temporary access
     custom = subparsers.add_parser('custom', help='Access custom patient range')
     custom.add_argument('--start', type=int, required=True, help='Start patient ID')
     custom.add_argument('--end', type=int, required=True, help='End patient ID')
     custom.add_argument('--name', type=str, default='Custom', help='Group name for display')
-    
+    custom.add_argument('--rmt23345-dir', type=str, default=None, dest='rmt23345_dir',
+                        help='Directory containing cleaned RMT23345_*.csv files')
+
     # ADMIN ACCESS: All patients (for administrators/supervisors)
     admin = subparsers.add_parser('admin', help='Access all patients (admin mode)')
-    
-    # DEVELOPMENT MODE: Sample data for testing/development
-    dev = subparsers.add_parser('dev', help='Development mode with sample data')
-    dev.add_argument('--patients', type=int, default=50, help='Number of sample patients (default: 50)')
+    admin.add_argument('--rmt23345-dir', type=str, default=None, dest='rmt23345_dir',
+                       help='Directory containing cleaned RMT23345_*.csv files')
     
     return parser.parse_args()
 
@@ -87,22 +94,24 @@ def create_app_with_args():
     
     # Create app instance based on which command was used
     if args.command == 'group-a':
-        return PatientTimelineApp(patient_range=(args.start, args.end), group_name="Group A")
+        pr = None if args.rmt23345_dir else (args.start, args.end)
+        return PatientTimelineApp(patient_range=pr, group_name="Group A",
+                                  rmt23345_data_dir=args.rmt23345_dir)
     elif args.command == 'group-b':
-        return PatientTimelineApp(patient_range=(args.start, args.end), group_name="Group B")
+        pr = None if args.rmt23345_dir else (args.start, args.end)
+        return PatientTimelineApp(patient_range=pr, group_name="Group B",
+                                  rmt23345_data_dir=args.rmt23345_dir)
     elif args.command == 'group-c':
-        return PatientTimelineApp(patient_range=(args.start, args.end), group_name="Group C")
+        pr = None if args.rmt23345_dir else (args.start, args.end)
+        return PatientTimelineApp(patient_range=pr, group_name="Group C",
+                                  rmt23345_data_dir=args.rmt23345_dir)
     elif args.command == 'custom':
-        return PatientTimelineApp(patient_range=(args.start, args.end), group_name=args.name)
+        pr = None if args.rmt23345_dir else (args.start, args.end)
+        return PatientTimelineApp(patient_range=pr, group_name=args.name,
+                                  rmt23345_data_dir=args.rmt23345_dir)
     elif args.command == 'admin':
-        # Admin gets access to all patients (no range restriction)
-        return PatientTimelineApp(patient_range=None, group_name="Admin (All Patients)")
-    elif args.command == 'dev':
-        # Development mode creates app with sample data
-        app = PatientTimelineApp(patient_range=None, group_name="Development Mode")
-        # Override with fake data for testing (20 events per patient average)
-        app.combined_data = app.generate_fake_data(args.patients * 20)
-        return app
+        return PatientTimelineApp(patient_range=None, group_name="Admin (All Patients)",
+                                  rmt23345_data_dir=args.rmt23345_dir)
     else:
         # No valid command provided - show help and exit
         print("No command specified. Available commands:")
@@ -111,7 +120,6 @@ def create_app_with_args():
         print("  python main.py group-c    # Access patients 201-300")
         print("  python main.py custom --start 1 --end 50 --name 'My Group'")
         print("  python main.py admin      # Access all patients")
-        print("  python main.py dev        # Development mode with sample data")
         sys.exit(1)
 
 def create_interface():
@@ -167,7 +175,7 @@ def create_interface():
                 margin-top: 10px !important;
                 margin-bottom: 8px !important;
             }
-            
+            iu
             .clean-control-column .section-title:first-child {
                 margin-top: 0 !important;
             }
@@ -326,7 +334,7 @@ def create_interface():
         # This tab shows current data status and provides export functionality
         with gr.Tab("Data Overview"):
             gr.Markdown("### Current Data Status")
-            
+
             with gr.Row():
                 # Left column: Data information and reload functionality
                 with gr.Column():
@@ -335,7 +343,7 @@ def create_interface():
                     data_status = gr.Textbox(label="Status", value=app.get_data_status(), interactive=False)
                     # Button to reload data from the file system
                     reload_data_btn = gr.Button("Reload Data", variant="primary")
-                
+
                 # Right column: Data export functionality
                 with gr.Column():
                     gr.Markdown("**Export Current Data**")
@@ -345,6 +353,18 @@ def create_interface():
                     export_btn = gr.Button("Export Data")
                     # Status message for export operations
                     export_status = gr.Textbox(label="Export Status", value="", interactive=False)
+
+            gr.Markdown("---")
+            gr.Markdown("### Upload Study Config")
+            gr.Markdown("Upload your `study_config.yaml` with paths to your data files on this server.")
+
+            with gr.Row():
+                upload_config = gr.UploadButton("↑ Upload study_config.yaml", file_types=[".yaml", ".yml"], size="sm")
+                config_name   = gr.Textbox(value="no file", show_label=False, interactive=False, max_lines=1, lines=1)
+
+            with gr.Row():
+                load_config_btn = gr.Button("Load Config & Data", variant="primary")
+                config_status   = gr.Textbox(label="Status", value="", interactive=False, lines=1)
         
         # ====================================================================
         # TAB 2: TIMELINE VIEWER
@@ -370,24 +390,15 @@ def create_interface():
                     # Right column: Chart controls and filters
                     with gr.Column(scale=5):
                         gr.Markdown("### Timeline Chart")
-                        
-                        # IBD Filter controls above the chart
-                        with gr.Row():
-                            # Radio buttons to filter events by IBD relevance
-                            ibd_filter = gr.Radio(
-                                choices=["All Events", "IBD Related Only", "Non-IBD Related Only"],
-                                label="Event Filter",
-                                value="All Events",
-                                interactive=True
-                            )
-                            # Manual refresh button (changes auto-update, but this provides explicit control)
-                            refresh_chart_btn = gr.Button("Refresh Chart", variant="secondary")
-                        
                         # Status message for chart operations
                         chart_status = gr.Textbox(label="Chart Status", value="No chart loaded", interactive=False)
-                
-                # Full width timeline plot - main visualization area
-                timeline_plot = gr.Plot(label="Patient Timeline")
+
+                # Full width timeline — rendered client-side via Plotly.js
+                # IBD filter buttons live inside the HTML component (no Python round-trip)
+                timeline_plot = gr.HTML(
+                    value="<p style='color:#6b7280;padding:20px;text-align:center;'>"
+                          "Select a patient and click Load Timeline to view the chart.</p>"
+                )
                 
                 # Chart information panel - shows patient stats and flare summaries
                 chart_info = gr.Textbox(label="Chart Information", value="No patient data loaded", 
@@ -561,8 +572,6 @@ def create_interface():
                 - `uv run python main.py group-c` - Access patients 201-300
                 - `uv run python main.py custom --start X --end Y --name "Group Name"` - Custom range
                 - `uv run python main.py admin` - Access all patients (admin mode)
-                - `uv run python main.py dev` - Development mode with sample data
-                - **Data Directory**: `/data/external_ps/baumgart/BAUMGART_SHARED/Baumgart_IBD/Sacha/ibd_activity_viewer/data`
                 - **Save Directories**: Group-specific folders (`groupa_saved_flares/`, `groupb_saved_flares/`, etc.)
                 - **Reload Data**: Use the "Reload Data" button to refresh data from the directory
                 - **Export Current Data**: Save the currently loaded data to CSV or Excel format
@@ -570,8 +579,7 @@ def create_interface():
                 ### 2. Running on Remote Server
                 **Terminal 1 - Start Application**:
                 ```bash
-                cd /data/baumgart/BAUMGART_SHARED/Baumgart_IBD/Mia/ibd-data-labelling-webapp
-                uv run python main.py group-a
+                uv run python main.py admin --rmt23345-dir /path/to/data
 
                 **Terminal 2 - SSH Tunnel**:
                 ```bash
@@ -652,9 +660,6 @@ def create_interface():
                 # Administrator viewing all patients
                 uv run python main.py admin
 
-                # Development/testing with sample data
-                uv run python main.py dev --patients 50
-                            
                 ###10. Troubleshooting
                 - **No patients visible**: Check that your command provides access to patients in the data range
                 - **Missing events**: Verify the IBD filter setting matches what you want to see
@@ -682,36 +687,37 @@ def create_interface():
             inputs=[export_format],  # Use selected format (CSV/Excel)
             outputs=[export_status]  # Show export status message
         )
-        
+
+        # Config YAML upload: reads paths from uploaded YAML and loads data directly
+        load_config_btn.click(
+            app.load_config_file,
+            inputs=[upload_config],
+            outputs=[config_status, data_status, patient_dropdown, chart_info]
+        )
+
+        def _fname(f):
+            if f is None:
+                return "no file"
+            p = f if isinstance(f, str) else f.name
+            return os.path.basename(p)
+
+        upload_config.upload(_fname, inputs=upload_config, outputs=config_name)
+
         # ====================================================================
         # EVENT HANDLERS - TIMELINE VIEWER TAB
         # ====================================================================
         
-        # Manual load timeline button
+        # Load timeline button — returns HTML/JS with filter buttons embedded
         load_timeline_btn.click(
-            app.load_patient_timeline,  # App method that creates timeline visualization
-            inputs=[patient_dropdown, ibd_filter],  # Current patient and filter settings
-            outputs=[timeline_plot, chart_status, chart_info]  # Update chart and info
-        )
-        
-        # IBD filter change: Auto-refresh when filter changes
-        ibd_filter.change(
-            app.load_patient_timeline,  # Same method as manual load
-            inputs=[patient_dropdown, ibd_filter],
+            app.load_patient_timeline_html,
+            inputs=[patient_dropdown],
             outputs=[timeline_plot, chart_status, chart_info]
         )
-        
-        # Manual refresh chart button (provides explicit control)
-        refresh_chart_btn.click(
-            app.load_patient_timeline,
-            inputs=[patient_dropdown, ibd_filter],
-            outputs=[timeline_plot, chart_status, chart_info]
-        )
-        
-        # Auto-refresh timeline when patient changes (key usability feature)
+
+        # Auto-load when patient dropdown changes
         patient_dropdown.change(
-            app.load_patient_timeline,
-            inputs=[patient_dropdown, ibd_filter],
+            app.load_patient_timeline_html,
+            inputs=[patient_dropdown],
             outputs=[timeline_plot, chart_status, chart_info]
         )
         
