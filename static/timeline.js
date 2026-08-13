@@ -148,8 +148,21 @@ function renderChart(filter) {
 
     var sMs  = ALL_EVENTS.map(function(e) { return new Date(e.start_date).getTime(); });
     var eMs  = ALL_EVENTS.map(function(e) { return new Date(e.end_date).getTime(); });
-    var tMin = sMs.length ? Math.min.apply(null, sMs) - 864000000 : ref - 864000000;
-    var tMax = eMs.length ? Math.max.apply(null, eMs) + 864000000 : ref + 864000000;
+
+    // Default view should focus on where the real data lives — a single stray
+    // outlier date (e.g. a 1970 record) shouldn't stretch the whole axis and
+    // squeeze everything else into a sliver. Use the 2nd/98th percentile for
+    // the initial range; the modebar's "Autoscale"/"Reset axes" button still
+    // lets the user zoom out to see 100% of the data, outliers included.
+    function percentileMs(arr, p) {
+        var s = arr.slice().sort(function(a, b) { return a - b; });
+        var idx = (s.length - 1) * p;
+        var lo = Math.floor(idx), hi = Math.ceil(idx);
+        return lo === hi ? s[lo] : s[lo] + (s[hi] - s[lo]) * (idx - lo);
+    }
+    var allMs = sMs.concat(eMs);
+    var tMin = allMs.length ? percentileMs(allMs, 0.02) - 864000000 : ref - 864000000;
+    var tMax = allMs.length ? percentileMs(allMs, 0.98) + 864000000 : ref + 864000000;
 
     var layout = {
         xaxis: { type: 'date', title: 'Time', range: [tMin, tMax] },
@@ -162,8 +175,8 @@ function renderChart(filter) {
         },
         barmode:       'overlay',
         showlegend:    false,
-        height:        820,
-        margin:        { l: 150, r: 30, t: 50, b: 60 },
+        autosize:      true,
+        margin:        { l: 120, r: 20, t: 16, b: 40 },
         shapes:        shapes,
         hovermode:     'closest',
         bargap:        0.1,
