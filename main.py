@@ -304,6 +304,33 @@ html, body{overflow-x:hidden !important;}
 .lbl-flare{flex:3 1 280px !important; min-width:260px !important;}
 .lbl-edit{flex:2 1 220px !important; min-width:200px !important;}
 .lbl-saved{flex:3 1 260px !important; min-width:240px !important;}
+
+/* User Guide: style the rendered markdown to match the app's theme.
+   Flow the sections into columns instead of one long narrow strip so the
+   page uses the full width of the screen. */
+.guide-card{max-width:100% !important; padding:32px 40px !important;}
+/* .guide-card itself is a flex container (Gradio Column default) — multicol
+   has no effect on flex children, so target the actual markdown text wrapper
+   nested inside it instead. */
+.guide-card .prose{column-count:2 !important; column-gap:48px !important; column-rule:1px solid #eaf0ed !important;}
+.guide-card h2{column-span:all !important; font-size:22px !important; font-weight:800 !important;
+  color:#0f2624 !important; margin:0 0 18px !important; letter-spacing:-.01em;}
+.guide-card h3{font-size:16px !important; font-weight:700 !important; color:#00504f !important;
+  margin:26px 0 10px !important; padding-bottom:6px !important; border-bottom:2px solid #dcefec !important;
+  break-after:avoid !important;}
+.guide-card h3:first-of-type{margin-top:0 !important;}
+.guide-card p, .guide-card li{font-size:14px !important; line-height:1.65 !important; color:#28423d !important;}
+.guide-card ul{margin:6px 0 14px !important; padding-left:22px !important; break-inside:avoid !important;}
+.guide-card li{margin-bottom:4px !important;}
+.guide-card pre{break-inside:avoid !important;}
+.guide-card strong{color:#152826 !important;}
+.guide-card code{background:#eef4f1 !important; color:#00504f !important; padding:1px 6px !important;
+  border-radius:4px !important; font-size:12.5px !important;}
+.guide-card pre{background:#152826 !important; border-radius:8px !important; padding:14px 16px !important;
+  overflow-x:auto !important; margin:10px 0 16px !important;}
+.gradio-container .guide-card pre code, .gradio-container .guide-card pre code *{
+  background:transparent !important; color:#dcefec !important; padding:0 !important;
+}
 .panel-cell.ui-card{display:flex !important; flex-direction:column !important; justify-content:flex-start !important;}
 @media (max-width:820px){
   .chart-col, .panel-col{flex:1 1 100% !important; max-width:100% !important;}
@@ -745,115 +772,119 @@ def create_interface():
         with gr.Column(elem_id="page_guide", elem_classes=["page"], visible=False) as page_guide:
             gr.HTML("<div class='page-head'><span class='pg-dot'></span>User Guide"
                     "<span class='page-badge'>Reference</span></div>")
-            gr.Markdown("""
-            ## Patient Timeline Viewer - User Guide
+            with gr.Column(elem_classes=["ui-card", "guide-card"]):
+              gr.Markdown("""
+## Patient Timeline Viewer — User Guide
 
-                ### 1. Data Loading & Access Control
-                - **Command-Based Access**: Different commands provide access to different patient groups
-                - **Available Commands**:
-                - `uv run python main.py group-a` - Access patients 1-100
-                - `uv run python main.py group-b` - Access patients 101-200
-                - `uv run python main.py group-c` - Access patients 201-300
-                - `uv run python main.py custom --start X --end Y --name "Group Name"` - Custom range
-                - `uv run python main.py admin` - Access all patients (admin mode)
-                - **Save Directories**: Group-specific folders (`groupa_saved_flares/`, `groupb_saved_flares/`, etc.)
-                - **Reload Data**: Use the "Reload Data" button to refresh data from the directory
-                - **Export Current Data**: Save the currently loaded data to CSV or Excel format
+### 1. Data Loading & Access Control
+- **Command-Based Access**: Different commands provide access to different patient groups
+- **Available Commands**:
+  - `uv run python main.py group-a` - Access patients 1-100
+  - `uv run python main.py group-b` - Access patients 101-200
+  - `uv run python main.py group-c` - Access patients 201-300
+  - `uv run python main.py custom --start X --end Y --name "Group Name"` - Custom range
+  - `uv run python main.py admin` - Access all patients (admin mode)
+- **Save Directories**: Group-specific folders (`groupa_saved_flares/`, `groupb_saved_flares/`, etc.)
+- **Reload Data**: Use the "Reload Data" button to refresh data from the directory
+- **Export Current Data**: Save the currently loaded data to CSV or Excel format
 
-                ### 2. Running on Remote Server
-                **Terminal 1 - Start Application**:
-                ```bash
-                uv run python main.py admin --rmt23345-dir /path/to/data
+### 2. Running on Remote Server
+**Terminal 1 - Start Application**:
+```bash
+uv run python main.py admin --rmt23345-dir /path/to/data
+```
 
-                **Terminal 2 - SSH Tunnel**:
-                ```bash
-                ssh -L 7860:localhost:7860 username@server-hostname
+**Terminal 2 - SSH Tunnel**:
+```bash
+ssh -L 7860:localhost:7860 username@server-hostname
+```
 
-                Access: Open browser to http://localhost:7860
+Access: Open browser to http://localhost:7860
 
-                ###3. Timeline Viewer & Event Filtering
-                - **Patient Selection**: Choose a patient from the dropdown (automatically populated from your assigned patient group)
-                - **IBD Event Filtering**: Use the radio buttons above the chart to filter events:
-                - **"All Events"** - Show all medical events (default)
-                - **"IBD Related Only"** - Show only IBD-related events (`ibd_related = True`)
-                - **"Non-IBD Related Only"** - Show only non-IBD events (`ibd_related = False`)
-                - **Real-time Filtering**: Event filter changes apply immediately without reloading
-                - **Interactive Chart**: Hover over events for detailed information, zoom and pan as needed
-                - **Cross-Tab Flares**: Monthly flares created in Labelling Mode appear as orange highlights with star markers
+### 3. Timeline Viewer & Event Filtering
+- **Patient Selection**: Choose a patient from the dropdown (automatically populated from your assigned patient group)
+- **IBD Event Filtering**: Use the buttons above the chart to filter events:
+  - **"All Events"** - Show all medical events (default)
+  - **"IBD Related Only"** - Show only IBD-related events (`ibd_related = True`)
+  - **"Non-IBD Related Only"** - Show only non-IBD events (`ibd_related = False`)
+- **Real-time Filtering**: Event filter changes apply immediately without reloading
+- **Interactive Chart**: Hover over events for detailed information, zoom and pan as needed
+- **Cross-Tab Flares**: Monthly flares created in Labelling Mode appear as highlighted periods on the timeline
 
-                ###4. Labelling Mode (Monthly Flare Labeling)
-                - **Patient Selection**: Choose a patient for monthly labeling
-                - **Month Navigation**: Select specific months using dropdown and navigation buttons
-                - **Monthly View**: Timeline shows selected month with navigation to view adjacent months
-                - **Evidence Classification**: Mark each month as having flare evidence (Yes/No)
-                - **Category Selection**: If evidence exists, select relevant medical event categories
-                - **Reason Documentation**: Optional text field for additional details
-                - **Efficient Navigation**: Dropdown only shows months with events for faster labeling
-                - **Auto-Reset Form**: Form clears automatically when switching months
+### 4. Labelling Mode (Monthly Flare Labeling)
+- **Patient Selection**: Choose a patient for monthly labeling
+- **Month Navigation**: Select specific months using dropdown and navigation buttons
+- **Monthly View**: Timeline shows selected month with navigation to view adjacent months
+- **Evidence Classification**: Mark each month as having flare evidence (Yes/No)
+- **Category Selection**: If evidence exists, select relevant medical event categories
+- **Reason Documentation**: Optional text field for additional details
+- **Efficient Navigation**: Dropdown only shows months with events for faster labeling
+- **Auto-Reset Form**: Form clears automatically when switching months
 
-                ###5. Monthly Timeline Features
-                - **Focused View**: Shows one month at a time with context from adjacent periods
-                - **Navigation Controls**: Move view forward/backward while maintaining labeling target
-                - **Visual Highlighting**: Selected month highlighted with blue background
-                - **Persistent Labels**: All monthly labels saved automatically per patient group directories
-                - **Flare Highlighting**: Months with Evidence=Yes show red background
-                - **Enhanced JSON Format**: Labels include metadata, timestamps, and readable category names
-                - **Rich Hover Information**: All flare details available on hover in both tabs
-                - **Cross-Tab Synchronization**: Monthly flares automatically appear in Timeline Viewer
+### 5. Monthly Timeline Features
+- **Focused View**: Shows one month at a time with context from adjacent periods
+- **Navigation Controls**: Move view forward/backward while maintaining labeling target
+- **Visual Highlighting**: Selected month highlighted for easy reference
+- **Persistent Labels**: All monthly labels saved automatically per patient group directories
+- **Flare Highlighting**: Months with Evidence=Yes show a highlighted background
+- **Enhanced JSON Format**: Labels include metadata, timestamps, and readable category names
+- **Rich Hover Information**: All flare details available on hover in both tabs
+- **Cross-Tab Synchronization**: Monthly flares automatically appear in Timeline Viewer
 
-                ###6. Lab Test Visualization
-                - **Multiple Same-Day Tests**:  When multiple lab tests occur on the same day, they appear as separate adjacent bars with 2-hour time offsets
-                - **Visual Separation**: Each lab test maintains its original duration but gets a small time offset for visibility
-                - **Individual Hover Data**: Each lab test bar shows its own specific details in the hover tooltip
+### 6. Lab Test Visualization
+- **Multiple Same-Day Tests**: When multiple lab tests occur on the same day, they appear as separate adjacent bars with 2-hour time offsets
+- **Visual Separation**: Each lab test maintains its original duration but gets a small time offset for visibility
+- **Individual Hover Data**: Each lab test bar shows its own specific details in the hover tooltip
 
-                ###7. Advanced Features
-                - **Command-Line Access Control**: Different teams can access different patient cohorts
-                - **Automatic Data Loading**: No need to manually upload files - data is loaded from the specified directory
-                Group-Specific Save Directories: Labels saved to separate folders per access group
-                - **Rich Hover Information**: View detailed event information with smart text wrapping for long descriptions
-                - **Colour-Coded Events**: Different event types (lab tests, prescriptions, visits, etc.) have distinct colours, and always in same Y-axis order
-                - **Export Capabilities**: Save charts as images using Plotly's built-in tools
-                - **Real-time Chart Updates**: All filtering and flare changes update the chart immediately
+### 7. Advanced Features
+- **Command-Line Access Control**: Different teams can access different patient cohorts
+- **Automatic Data Loading**: No need to manually upload files - data is loaded from the specified directory
+- **Group-Specific Save Directories**: Labels saved to separate folders per access group
+- **Rich Hover Information**: View detailed event information with smart text wrapping for long descriptions
+- **Colour-Coded Events**: Different event types (lab tests, prescriptions, visits, etc.) have distinct colours, and always in same Y-axis order
+- **Export Capabilities**: Save charts as images using Plotly's built-in tools
+- **Real-time Chart Updates**: All filtering and flare changes update the chart immediately
 
-                ###8. Data Format Requirements
-                The app expects CSV files with "events" in the filename containing:
+### 8. Data Format Requirements
+The app expects CSV files with "events" in the filename containing:
 
-                **Required columns:**
-                - `patient_id`: Unique identifier for each patient (integer)
-                - `start_date`: Event start date (YYYY-MM-DD format)
-                - `end_date`: Event end date (YYYY-MM-DD format)
-                - `event_type`: Type of medical event (string)
-                - `ibd_related`: Boolean flag indicating if event is IBD-related (True/False)
+**Required columns:**
+- `patient_id`: Unique identifier for each patient (integer)
+- `start_date`: Event start date (YYYY-MM-DD format)
+- `end_date`: Event end date (YYYY-MM-DD format)
+- `event_type`: Type of medical event (string)
+- `ibd_related`: Boolean flag indicating if event is IBD-related (True/False)
 
-                **Optional columns:**
-                - `event_info`: JSON string with additional details (displayed in hover tooltips)
-                - `source_dataset`: Data source identifier (e.g., "CLAIMS", "LAB", "DAD")
-                - Any additional columns will be displayed in hover information if part of `event_info`
+**Optional columns:**
+- `event_info`: JSON string with additional details (displayed in hover tooltips)
+- `source_dataset`: Data source identifier (e.g., "CLAIMS", "LAB", "DAD")
+- Any additional columns will be displayed in hover information if part of `event_info`
 
-                ###9. Command Line Examples
-                ```bash
-                # Research team accessing early patients
-                uv run python main.py group-a
+### 9. Command Line Examples
+```bash
+# Research team accessing early patients
+uv run python main.py group-a
 
-                # Clinical team accessing different cohort
-                uv run python main.py group-b
+# Clinical team accessing different cohort
+uv run python main.py group-b
 
-                # Custom analysis group
-                uv run python main.py custom --start 150 --end 250 --name "Cohort Study"
+# Custom analysis group
+uv run python main.py custom --start 150 --end 250 --name "Cohort Study"
 
-                # Administrator viewing all patients
-                uv run python main.py admin
+# Administrator viewing all patients
+uv run python main.py admin
+```
 
-                ###10. Troubleshooting
-                - **No patients visible**: Check that your command provides access to patients in the data range
-                - **Missing events**: Verify the IBD filter setting matches what you want to see
-                - **Overlapping lab tests**: The app automatically separates same-day lab tests - if still overlapping, try refreshing the chart
-                - **Flare not saving**: Ensure dates are in YYYY-MM-DD format and end date is after start date, check group directory permissions (groupa_saved_flares/, etc.)
-                - **Data not loading**: Check that the data directory exists and contains CSV files with "events" in the filename
-                - **Monthly flares not showing**: Ensure you're viewing the correct patient and the timeline is refreshed
-                - **Permission denied**: Ensure group directories have proper permissions (chmod 2775)
-                - **SSH tunnel not working**: Verify both terminals are running and port numbers match
-                """)
+### 10. Troubleshooting
+- **No patients visible**: Check that your command provides access to patients in the data range
+- **Missing events**: Verify the IBD filter setting matches what you want to see
+- **Overlapping lab tests**: The app automatically separates same-day lab tests - if still overlapping, try refreshing the chart
+- **Flare not saving**: Ensure dates are in YYYY-MM-DD format and end date is after start date, check group directory permissions (groupa_saved_flares/, etc.)
+- **Data not loading**: Check that the data directory exists and contains CSV files with "events" in the filename
+- **Monthly flares not showing**: Ensure you're viewing the correct patient and the timeline is refreshed
+- **Permission denied**: Ensure group directories have proper permissions (chmod 2775)
+- **SSH tunnel not working**: Verify both terminals are running and port numbers match
+""")
 
         # ====================================================================
         # EVENT HANDLERS - DATA OVERVIEW PAGE
