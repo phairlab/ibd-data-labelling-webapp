@@ -1,0 +1,151 @@
+# This file acts as a control panel for the webapp, instead of needing to chnge the python code for new adjustments,
+# someone can just edit this file.
+# Configuration for the RMT23345 timeline labeling webapp.
+# Edit this file to control which data sources are loaded and which
+# fields appear in the event hover tooltip — no code changes needed.
+
+# ─────────────────────────────────────────────────────────────────
+# Disease detection.
+# Controls how events are flagged as "disease-related" on the timeline.
+# All values here are IBD defaults — change them for a different disease.
+#
+# `keywords`     — regex for keyword matching in event descriptions (after R prep).
+# `icd_prefixes` — ICD code prefixes for disease detection.
+#                  ICD-10 starts with a letter (K50), ICD-9 starts with a digit (555).
+# `icd9_dictionary`  / `icd10_dictionary` — paths to lookup CSVs so raw codes are
+#                  shown as "K500 - Crohn disease of small intestine" in the tooltip.
+#                  Leave blank if dictionaries are not yet downloaded.
+# `biologic_atc_codes` / `steroid_atc_codes` — ATC drug codes for prescription detection.
+# ─────────────────────────────────────────────────────────────────
+disease_detection:
+  # Text keyword matching in event descriptions — IBD defaults below
+  keywords: "crohn|ulcerative|inflammatory bowel|ileitis|proctocolitis"
+
+  icd_prefixes:
+    - K50    # ICD-10: Crohn's disease
+    - K51    # ICD-10: Ulcerative colitis
+    - "555"  # ICD-9:  Crohn's disease
+    - "556"  # ICD-9:  Ulcerative colitis
+
+  # ICD lookup dictionaries — set paths once downloaded; leave blank to skip enrichment
+  # icd9_dictionary:  resources/icd9_dictionary.csv
+  # icd10_dictionary: resources/icd10ca_dictionary.csv
+
+  # Prescription detection by ATC drug code (PIN dataset)
+  biologic_atc_codes:
+    - L04AB04  # adalimumab
+    - L04AB02  # infliximab
+    - L04AB06  # golimumab
+    - L04AB05  # certolizumab pegol
+    - L04AA33  # vedolizumab
+    - L04AC05  # ustekinumab
+    - L04AC18  # risankizumab
+    - L04AC24  # mirikizumab
+    - L04AF01  # tofacitinib
+    - L04AF03  # upadacitinib
+  steroid_atc_codes:
+    - H02AB04  # methylprednisolone
+    - H02AB06  # prednisolone
+    - H02AB07  # prednisone
+
+# ─────────────────────────────────────────────────────────────────
+# Sources to load.
+# Comment out any source block you don't need to reduce server load.
+# `file`        — absolute path to the CSV on this server.
+# `start_date`  — column used as the event start time.
+# `end_date`    — column used as the event end time.
+#                 Use a list to try columns in order; if all are
+#                 missing the end time falls back to 23:59 same day.
+# ─────────────────────────────────────────────────────────────────
+sources:
+  AMB:
+    file: /data/baumgart/BAUMGART_SHARED/IBD_timeline_labeling/sanika3/sanika-data/RMT23345_AMB.csv
+    start_date: ArriveDt
+    end_date:
+      - DepartDt
+      - DispDt
+
+  DAD:
+    file: /data/baumgart/BAUMGART_SHARED/IBD_timeline_labeling/sanika3/sanika-data/RMT23345_DAD.csv
+    start_date: ADMITDATE
+    end_date: DISDATE
+
+  LAB:
+    file: /data/baumgart/BAUMGART_SHARED/IBD_timeline_labeling/sanika3/sanika-data/RMT23345_LAB.csv
+    start_date: verifyDt
+    end_date: verifyDt
+
+  PIN:
+    file: /data/baumgart/BAUMGART_SHARED/IBD_timeline_labeling/sanika3/sanika-data/RMT23345_PIN.csv
+    start_date: DSPN_DATE
+    end_date: DSPN_DATE
+
+  CLM:
+    file: /data/baumgart/BAUMGART_SHARED/IBD_timeline_labeling/sanika3/sanika-data/RMT23345_CLM.csv
+    start_date: SE_START_DATE
+    end_date: SE_END_DATE
+
+  DI:
+    file: /data/baumgart/BAUMGART_SHARED/IBD_timeline_labeling/sanika3/sanika-data/RMT23345_DI.csv
+    start_date: SVC_DT
+    end_date: SVC_DT
+
+# ─────────────────────────────────────────────────────────────────
+# Fields shown when you hover over, for each source.
+# `column` must match the exact CSV column header.
+# `label`  is the human-readable name shown in the tooltip.
+# ─────────────────────────────────────────────────────────────────
+display:
+  AMB:
+    - column: INST
+      label: "Hospital"
+    - column: CACS_CODE
+      label: "Visit Category"
+    - column: ABSTRACT_TYPE
+      label: "Visit Type"
+    - column: TEXT_SUPERFEATURE
+      label: "Details"
+
+  DAD:
+    - column: INST
+      label: "Hospital"
+    - column: CMG
+      label: "CMG"
+    - column: ADMITCAT
+      label: "Admit Category"
+    - column: TEXT_SUPERFEATURE
+      label: "Details"
+
+  LAB:
+    - column: TEST_NM
+      label: "Test"
+    - column: TEST_RSLT
+      label: "Result"
+    - column: TEST_UOFM
+      label: "Unit"
+    - column: TEST_ABNRML_FLAG
+      label: "Abnormal"
+
+  PIN:
+    - column: SUPP_DRUG_ATC_CODE
+      label: "ATC Code"
+    - column: DRUG_DIN
+      label: "Drug ID"
+    - column: DSPN_AMT_QTY
+      label: "Quantity"
+    - column: DSPN_DAY_SUPPLY_QTY
+      label: "Days Supply"
+
+  CLM:
+    - column: TEXT_SUPERFEATURE
+      label: "Claims"
+
+  DI:
+    - column: CPEL_CATLG_DESC
+      label: "Exam"
+    - column: CPEL_MDLTY_CD
+      label: "Modality"
+
+    
+
+      

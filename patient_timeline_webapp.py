@@ -4,9 +4,21 @@ import plotly.graph_objects as go
 import json
 import os
 import textwrap
-from datetime import datetime, timedelta
-import numpy as np
-import random
+from datetime import datetime
+import yaml
+from rmt23345_events import load_all_events
+
+
+def _load_study_config(config_path: str = "study_config.yaml") -> dict:
+    """Load study_config.yaml if it exists; return empty dict otherwise."""
+    try:
+        with open(config_path) as f:
+            return yaml.safe_load(f) or {}
+    except FileNotFoundError:
+        return {}
+    except Exception as e:
+        print(f"[study_config] Warning: could not read {config_path}: {e}")
+        return {}
 
 
 class PatientTimelineApp:
@@ -25,7 +37,7 @@ class PatientTimelineApp:
     - Export functionality for data and charts
     """
     
-    def __init__(self, patient_range=None, group_name="Default"):
+    def __init__(self, patient_range=None, group_name="Default", rmt23345_data_dir=None):
         """
         Initialize the Patient Timeline App.
         
@@ -47,6 +59,10 @@ class PatientTimelineApp:
         # These settings control which patients this app instance can access
         self.patient_range = patient_range  # (start_id, end_id) tuple or None for all patients
         self.group_name = group_name       # Display name for this patient group
+
+        # === RMT23345 Data Directory ===
+        # If set, load events from cleaned RMT23345 CSVs instead of the default CSV
+        self.rmt23345_data_dir = rmt23345_data_dir
         
         # === Navigation State ===
         # Used in labeling mode to track view offset from selected month
@@ -58,74 +74,33 @@ class PatientTimelineApp:
     
     def auto_load_data(self):
         """
-        Automatically load patient data from the specified directory.
-        
-        This method attempts to load data from a predefined CSV file. If the file
-        is not found or cannot be loaded, it falls back to generating sample data
-        for testing purposes.
-        
-        File Location: /data/external_ps/baumgart/BAUMGART_SHARED/Baumgart_IBD/Sacha/ibd_activity_viewer/data/
-        Target File: selected_events_mia_patients.csv
-        
-        Expected CSV Format:
-        - patient_id: Integer patient identifier
-        - start_date: Event start date (YYYY-MM-DD)
-        - end_date: Event end date (YYYY-MM-DD)
-        - event_type: Type of medical event (string)
-        - ibd_related: Boolean flag for IBD-related events
-        - event_info: JSON string with additional event details
-        - source_dataset: Data source identifier
+        Load patient data from the RMT23345 directory if one was specified.
+        If no directory is given, combined_data stays None — the user must
+        either provide --rmt23345-dir at startup or upload files via the UI.
         """
-        try:
-            # === Define Data Location ===
-            # Set the repository path and data directory
-            repo_path = '/data/external_ps/baumgart/BAUMGART_SHARED/Baumgart_IBD/Sacha/ibd_activity_viewer'
-            data_dir = os.path.join(repo_path, 'data')
-            
-            # Specific file to load (can be modified to load different files)
-            target_file = 'selected_events_mia_patients.csv'
-            file_path = os.path.join(data_dir, target_file)
-            
-            # === Check File Existence ===
-            if not os.path.exists(file_path):
-                print(f"Target file not found: {file_path}")
-                print("Falling back to sample data generation...")
-                # Generate fake data for testing if real data is not available
-                self.combined_data = self.generate_fake_data(1000)
-                self.apply_patient_filter()
-                return
-            
-            # === Load Real Data ===
+        if self.rmt23345_data_dir and os.path.isdir(self.rmt23345_data_dir):
             try:
-                print(f"Loading: {target_file}")
-                df = pd.read_csv(file_path)
-                
-                # Convert date columns to pandas datetime objects for proper date handling
-                df['start_date'] = pd.to_datetime(df['start_date'])
-                df['end_date'] = pd.to_datetime(df['end_date'])
-                
-                self.combined_data = df
-                print(f"Successfully loaded {len(self.combined_data)} records from {target_file}")
-                
-                # Apply patient filtering based on command line arguments
-                self.apply_patient_filter()
-                
+                study_config = _load_study_config()
+                if study_config:
+                    enabled = study_config.get("sources", {}).get("enabled", [])
+                    print(f"study_config.yaml: loading sources {enabled}")
+                print(f"Loading from RMT23345 directory: {self.rmt23345_data_dir}")
+                df = load_all_events(self.rmt23345_data_dir, config=study_config)
+                if len(df) > 0:
+                    df['start_date'] = pd.to_datetime(df['start_date'], utc=True, errors='coerce').dt.tz_localize(None)
+                    df['end_date']   = pd.to_datetime(df['end_date'],   utc=True, errors='coerce').dt.tz_localize(None)
+                    self.combined_data = df
+                    print(f"Loaded {len(df)} events from RMT23345 CSVs")
+                    self.apply_patient_filter()
+                else:
+                    print("No events found in the specified directory.")
             except Exception as e:
-                print(f"Error loading {target_file}: {e}")
-                print("Falling back to sample data generation...")
-                # If CSV loading fails, generate sample data
-                self.combined_data = self.generate_fake_data(1000)
-                self.apply_patient_filter()
-                
-        except Exception as e:
-            print(f"Error auto-loading data: {e}")
-            print("Falling back to sample data generation...")
-            # Final fallback to sample data
-            self.combined_data = self.generate_fake_data(1000)
-            self.apply_patient_filter()
+                print(f"Failed to load RMT23345 data: {e}")
+        else:
+            print("No data directory specified. Use --rmt23345-dir")
     
     def apply_patient_filter(self):
-        """
+        """no but my 
         Apply patient range filtering based on command line arguments.
         
         This method filters the loaded data to only include patients within
@@ -189,89 +164,6 @@ class PatientTimelineApp:
         else:
             return []
     
-    def generate_fake_data(self, num_rows=1000):
-        """
-        Generate fake patient data for testing/demonstration purposes.
-        
-        This method creates realistic-looking medical event data when real data
-        is not available. The generated data includes various event types,
-        realistic date ranges, and JSON-formatted event information.
-        
-        Args:
-            num_rows (int): Approximate number of total events to generate
-        
-        Returns:
-            pd.DataFrame: Generated patient event data with required columns
-        """
-        # === Generate Patient IDs ===
-        # Create unique patient IDs (about 50 events per patient on average)
-        unique_patient_ids = np.random.randint(1, 1000, size=num_rows // 50)
-        
-        # === Generate Event Counts Per Patient ===
-        # Each patient gets a random number of events between 50-100
-        patient_event_counts = {patient_id: random.randint(50, 100) for patient_id in unique_patient_ids}
-        
-        # === Generate Events for Each Patient ===
-        data = []
-        for patient_id, event_count in patient_event_counts.items():
-            # === Generate Random Dates ===
-            # Create events within a realistic timeframe (2010-2022)
-            start_date_2010 = datetime(2010, 1, 1)
-            end_date_2022 = datetime(2022, 12, 31)
-            date_range_days = (end_date_2022 - start_date_2010).days
-
-            # Generate random start dates within the range
-            start_dates = [start_date_2010 + timedelta(days=random.randint(0, date_range_days)) for _ in range(event_count)]
-            # Generate end dates (0-10 days after start date)
-            end_dates = [start_date + timedelta(days=random.randint(0, 10)) for start_date in start_dates]
-
-            # === Ensure End Dates Don't Exceed Range ===
-            for i, end_date in enumerate(end_dates):
-                if end_date > end_date_2022:
-                    end_dates[i] = end_date_2022
-            
-            # === Generate Random Event Types ===
-            # These should match the real event types in your actual data
-            event_types = random.choices(
-                ['imaging', 'ambulatory_visit', 'hospitalization', 'medication_change', 'lab_test'], 
-                k=event_count
-            )
-            
-            # === Generate IBD-Related Flags ===
-            # Random boolean flags for IBD-related events
-            ibd_related = random.choices([True, False], k=event_count)
-            
-            # === Generate Event Information ===
-            # Create JSON strings with additional event details (mimics real data structure)
-            event_info = [
-                json.dumps({
-                    "Patient Age": random.randint(1, 100),
-                    "Patient Sex": random.choice(["Male", "Female"]),
-                    "Additional Info": f"Info {i}"
-                }) for i in range(event_count)
-            ]
-            
-            # === Generate Source Datasets ===
-            # Random data source identifiers (should match your real data sources)
-            source_datasets = random.choices(['DI', 'DAD', 'CLAIMS', 'PIN', 'LAB', 'NACRS'], k=event_count)
-            
-            # === Create Event Records ===
-            # Append data for this patient
-            for i in range(event_count):
-                data.append({
-                    'patient_id': patient_id,
-                    'start_date': start_dates[i],
-                    'end_date': end_dates[i],
-                    'event_type': event_types[i],
-                    'ibd_related': ibd_related[i],
-                    'event_info': event_info[i],
-                    'source_dataset': source_datasets[i]
-                })
-        
-        # === Return DataFrame ===
-        fake_data = pd.DataFrame(data)
-        return fake_data
-    
     def reload_data(self):
         """
         Reload data from the directory and update UI components.
@@ -316,6 +208,68 @@ class PatientTimelineApp:
         except Exception as e:
             return f"Failed to export data: {str(e)}"
     
+    def load_config_file(self, config_file):
+        """
+        Accept an uploaded study_config.yaml, read it, and load data from
+        the file paths specified in its sources section. Paths may be absolute
+        (pointing anywhere on the server) or relative (resolved against data_dir).
+
+        Returns:
+            tuple: (status_msg, data_status, patient_dropdown_update, chart_info)
+        """
+        import gradio as gr
+
+        if config_file is None:
+            return (
+                "No config file selected.",
+                self.get_data_status(),
+                gr.update(),
+                self.get_data_status(),
+            )
+
+        src = config_file if isinstance(config_file, str) else config_file.name
+
+        try:
+            with open(src, 'r') as f:
+                uploaded_config = yaml.safe_load(f) or {}
+        except Exception as e:
+            return (
+                f"Failed to read config file: {e}",
+                self.get_data_status(),
+                gr.update(),
+                self.get_data_status(),
+            )
+
+        try:
+            df = load_all_events(data_dir=self.rmt23345_data_dir, config=uploaded_config)
+            if len(df) == 0:
+                return (
+                    "Config loaded but no events found. Check that the file paths in your YAML exist on this server.",
+                    self.get_data_status(),
+                    gr.update(),
+                    self.get_data_status(),
+                )
+            df['start_date'] = pd.to_datetime(df['start_date'], utc=True, errors='coerce').dt.tz_localize(None)
+            df['end_date']   = pd.to_datetime(df['end_date'],   utc=True, errors='coerce').dt.tz_localize(None)
+            self.combined_data = df
+            self.apply_patient_filter()
+        except Exception as e:
+            return (
+                f"Error loading data from config: {e}",
+                self.get_data_status(),
+                gr.update(),
+                self.get_data_status(),
+            )
+
+        patient_choices = self.get_patient_choices()
+        data_status     = self.get_data_status()
+        return (
+            f"Loaded {len(self.combined_data):,} events for {len(patient_choices)} patients.",
+            data_status,
+            gr.update(choices=patient_choices, value=patient_choices[0] if patient_choices else None),
+            data_status,
+        )
+
     def load_patient_timeline(self, patient_id, ibd_filter="All Events"):
         """
         Load timeline for selected patient with IBD filtering.
@@ -747,5 +701,44 @@ class PatientTimelineApp:
             except Exception as e:
                 print(f"Error formatting monthly flare: {e}")
                 continue
-        
+
         return info
+
+    def load_patient_timeline_html(self, patient_id):
+        """
+        Load timeline as client-side HTML/JS (Plotly.js) — no IBD filter round-trip.
+
+        Returns:
+            tuple: (html_string, status_message, chart_info_text)
+        """
+        if self.combined_data is None:
+            placeholder = "<p style='color:#6b7280;padding:20px;'>Please load patient data first.</p>"
+            return placeholder, "Please load patient data first", ""
+
+        if not patient_id:
+            placeholder = "<p style='color:#6b7280;padding:20px;'>Please select a patient ID.</p>"
+            return placeholder, "Please select a patient ID", ""
+
+        try:
+            try:
+                pid = int(patient_id)
+            except (ValueError, TypeError):
+                pid = patient_id
+
+            patient_data = self.combined_data[
+                self.combined_data['patient_id'].astype(str) == str(pid)
+            ].copy()
+
+            self.current_patient_data = patient_data
+            self.current_patient_id   = pid
+            self.load_existing_flares()
+
+            from timeline_visualization import build_timeline_html
+            html   = build_timeline_html(self)
+            info   = self.get_chart_info()
+            status = f"Chart loaded for Patient {self.current_patient_id} — filter using the buttons above the chart"
+            return html, status, info
+
+        except Exception as e:
+            err_html = f"<p style='color:#ef4444;padding:20px;'>Error: {str(e)}</p>"
+            return err_html, f"Failed to load patient timeline: {str(e)}", ""

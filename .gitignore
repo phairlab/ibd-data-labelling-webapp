@@ -27,3 +27,7 @@ dist/
 .venv/
 *.pyc
 .python-version
+# Real patient data — never commit
+patient_data/
+patient_labels/
+venv/
