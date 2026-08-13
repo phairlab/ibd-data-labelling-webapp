@@ -742,3 +742,90 @@ class PatientTimelineApp:
         except Exception as e:
             err_html = f"<p style='color:#ef4444;padding:20px;'>Error: {str(e)}</p>"
             return err_html, f"Failed to load patient timeline: {str(e)}", ""
+
+    # ========================================================================
+    # UI HELPER METHODS (read-only) — power the stat tiles / cards / panels
+    # in the redesigned UI. These do not change any loading/saving logic,
+    # they just summarize data that is already loaded.
+    # ========================================================================
+
+    def get_overview_stats(self):
+        """Aggregate stats across the whole loaded dataset, for the Data Overview tiles."""
+        if self.combined_data is None or len(self.combined_data) == 0:
+            return {"total_records": 0, "patients": 0, "ibd_pct": 0,
+                    "date_range_years": 0, "avg_per_patient": 0,
+                    "date_min": None, "date_max": None}
+        df = self.combined_data
+        total = len(df)
+        patients = df['patient_id'].nunique()
+        ibd_pct = round(100 * df['ibd_related'].mean()) if 'ibd_related' in df.columns else 0
+        span_days = (df['end_date'].max() - df['start_date'].min()).days
+        years = round(span_days / 365.25, 1) if span_days > 0 else 0
+        avg = round(total / patients, 1) if patients else 0
+        return {"total_records": total, "patients": patients, "ibd_pct": ibd_pct,
+                "date_range_years": years, "avg_per_patient": avg,
+                "date_min": df['start_date'].min().date(), "date_max": df['end_date'].max().date()}
+
+    def get_event_breakdown(self, df=None):
+        """Event-type counts (dataset-wide by default), using readable display names."""
+        from timeline_visualization import get_label_mapping
+        mapping = get_label_mapping()
+        data = df if df is not None else self.combined_data
+        if data is None or len(data) == 0:
+            return []
+        counts = data['event_type'].value_counts()
+        return [(mapping.get(et, str(et).replace('_', ' ').title()), int(c)) for et, c in counts.items()]
+
+    def get_patient_panel_stats(self):
+        """Summary stats for the currently loaded patient, for the Timeline Viewer side panel."""
+        if self.current_patient_data is None or len(self.current_patient_data) == 0:
+            return None
+        df = self.current_patient_data
+        records = len(df)
+        span_days = (df['end_date'].max() - df['start_date'].min()).days
+        years = round(span_days / 365.25, 1) if span_days > 0 else 0
+        ibd_pct = round(100 * df['ibd_related'].mean()) if 'ibd_related' in df.columns else 0
+        monthly_labels = self.load_monthly_labels() if hasattr(self, 'load_monthly_labels') else {}
+        monthly_flare_count = sum(1 for v in monthly_labels.values() if v.get('evidence') == 'Yes')
+        flares = len(self.ranges) + monthly_flare_count
+        return {"patient_id": self.current_patient_id, "records": records,
+                "followup_years": years, "ibd_pct": ibd_pct, "flares": flares}
+
+    def get_flare_periods_list(self):
+        """Combine date-based flares + monthly 'Yes' flares into one sorted list for display."""
+        entries = []
+        for flare_data in self.ranges:
+            if len(flare_data) == 3:
+                start, end, reason = flare_data
+                categories = []
+            else:
+                start, end, categories, reason = flare_data
+            start_ts = pd.to_datetime(start)
+            label = categories[0].replace('_', ' ').title() if categories else (reason or "Flare")
+            entries.append({"sort": start_ts, "date_str": start_ts.strftime('%b %Y'), "label": label})
+
+        monthly_labels = self.load_monthly_labels() if hasattr(self, 'load_monthly_labels') else {}
+        for month_period_str, label_data in monthly_labels.items():
+            if label_data.get('evidence') != 'Yes':
+                continue
+            try:
+                period = pd.Period(month_period_str)
+                cats = label_data.get('categories', [])
+                label = cats[0].replace('_', ' ').title() if cats else "Flare"
+                entries.append({"sort": period.to_timestamp(), "date_str": period.strftime('%b %Y'), "label": label})
+            except Exception:
+                continue
+
+        entries.sort(key=lambda e: e["sort"])
+        return entries
+
+    def get_labelling_progress(self):
+        """Labelling completion stats for the current patient, for the sidebar session card."""
+        if self.current_patient_data is None:
+            return {"labelled": 0, "total": 0, "flares": 0, "no_flare": 0}
+        total = len(self.get_all_patient_months())
+        monthly_labels = self.load_monthly_labels() if hasattr(self, 'load_monthly_labels') else {}
+        labelled = len(monthly_labels)
+        flares = sum(1 for v in monthly_labels.values() if v.get('evidence') == 'Yes')
+        no_flare = labelled - flares
+        return {"labelled": labelled, "total": total, "flares": flares, "no_flare": no_flare}
