@@ -907,20 +907,22 @@ _TIMELINE_IFRAME_INNER = """<!DOCTYPE html>
 <script src="https://cdn.plot.ly/plotly-2.35.0.min.js"></script>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
-  body { font-family:Inter,Arial,sans-serif; background:white; }
+  html, body { height:100%; }
+  body { font-family:Inter,Arial,sans-serif; background:white; display:flex; flex-direction:column; }
+  #plot { flex:1 1 auto; min-height:0; }
   #filter-bar { display:flex; gap:8px; padding:10px 8px 8px; align-items:center; flex-wrap:wrap; }
-  .fbtn { padding:6px 16px; border-radius:6px; border:none; font-size:13px;
+  .fbtn { padding:6px 16px; border-radius:6px; border:none; font-size:13px; white-space:nowrap;
           font-weight:500; cursor:pointer; transition:background 0.2s,color 0.2s; }
-  .fbtn.on  { background:#3b82f6; color:white; }
-  .fbtn.off { background:#e5e7eb; color:#374151; }
+  .fbtn.on  { background:#00726f; color:white; }
+  .fbtn.off { background:#ffffff; color:#000000; border:1px solid #d5ddd9; }
 
-  /* Unified toolbar bar — light blue plate, single row */
+  /* Unified toolbar bar — light teal plate, single row, matches app palette */
   #filter-bar {
-    background: #eff6ff;
+    background: #dcefec;
     border-radius: 8px;
     padding: 8px 12px;
     margin: 6px 6px 0;
-    border: 1px solid #bfdbfe;
+    border: 1px solid #b9dcd6;
     flex-wrap: nowrap !important;
   }
 
@@ -945,10 +947,10 @@ _TIMELINE_IFRAME_INNER = """<!DOCTYPE html>
 </head>
 <body>
 <div id="filter-bar">
-  <span style="font-size:14px;font-weight:600;color:#374151;margin-right:4px;">Event Filter:</span>
+  <span style="font-size:14px;font-weight:600;color:#152826;margin-right:4px;white-space:nowrap;">Event Filter:</span>
   <button class="fbtn on"  onclick="setF('all')">All Events</button>
   <button class="fbtn off" onclick="setF('ibd')">IBD Related Only</button>
-  <button class="fbtn off" onclick="setF('non_ibd')">Non-IBD Only</button>
+  <button class="fbtn off" onclick="setF('non_ibd')">Non-IBD Related Only</button>
 </div>
 <div id="plot"></div>
 <script>
@@ -1130,8 +1132,8 @@ _TIMELINE_HTML_TEMPLATE = """
             },
             barmode:      'overlay',
             showlegend:   false,
-            height:       800,
-            margin:       { l:150, r:30, t:20, b:60 },
+            height:       320,
+            margin:       { l:120, r:20, t:14, b:40 },
             shapes:       shapes,
             hovermode:    'closest',
             bargap:       0.1,
@@ -1200,6 +1202,6 @@ def build_timeline_html(app):
     srcdoc = _html.escape(inner, quote=True)
     return (
         f'<iframe srcdoc="{srcdoc}" '
-        f'style="width:100%;height:880px;border:none;display:block;">'
+        f'style="width:100%;height:100%;min-height:700px;border:none;display:block;">'
         f'</iframe>'
     )
