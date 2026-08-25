@@ -112,10 +112,82 @@ function relocateModebar() {
 }
 
 var _chartReady = false;
+var _relayoutBound = false;
+var _clampingZoom = false;
+var MAX_VIEW_WIDTH = null;
+var DEFAULT_MIN = null, DEFAULT_MAX = null;
+
+// Zooming in is unrestricted, but zooming OUT (clicking "-", scrolling out,
+// drag-zoom, Autoscale, Reset axes) can't go past the default view the chart
+// first loaded with — past that the bars are too compressed to read, so
+// snap back to the default instead of letting the view keep widening.
+function clampMaxZoom(eventData) {
+    if (_clampingZoom || !eventData) return;
+
+    if (MAX_VIEW_WIDTH === null) return;
+
+    if (eventData['xaxis.autorange'] === true) {
+        // Autoscale/Reset axes resets via Plotly's own fit-to-ALL-data
+        // autorange, which includes any stray outlier dates (e.g. a 1970
+        // record) — centering a normal-width window on THAT range's
+        // midpoint can land in decades of empty space with no bars in
+        // sight at all, even though the DOM still has them. The default
+        // view (tMin/tMax below) was already computed to exclude such
+        // outliers via percentiles, so just snap straight back to it —
+        // that's the one range guaranteed to actually show the data.
+        _clampingZoom = true;
+        Plotly.relayout('plot', {
+            'xaxis.range[0]': DEFAULT_MIN,
+            'xaxis.range[1]': DEFAULT_MAX
+        }).then(function() { _clampingZoom = false; });
+        return;
+    }
+
+    var hasMin = Object.prototype.hasOwnProperty.call(eventData, 'xaxis.range[0]');
+    var hasMax = Object.prototype.hasOwnProperty.call(eventData, 'xaxis.range[1]');
+    if (!hasMin || !hasMax) return;
+    var r0 = new Date(eventData['xaxis.range[0]']).getTime();
+    var r1 = new Date(eventData['xaxis.range[1]']).getTime();
+
+    var width = r1 - r0;
+    if (width > MAX_VIEW_WIDTH) {
+        var center = (r0 + r1) / 2;
+        _clampingZoom = true;
+        Plotly.relayout('plot', {
+            'xaxis.range[0]': center - MAX_VIEW_WIDTH / 2,
+            'xaxis.range[1]': center + MAX_VIEW_WIDTH / 2
+        }).then(function() { _clampingZoom = false; });
+    }
+}
+
+// Row spacing between the 6 fixed category rows — "+"/"-" on the modebar
+// adjust how much of each row's slot the bar fills (BASE = tight/default,
+// MIN = most spread out). Never exceeds BASE in either direction, so there's
+// no unfilled/blank space: the bar always occupies some fraction of its own
+// fixed-height row slot, nothing more.
+var ROW_SPACING_LEVEL = 0;
+var ROW_SPACING_MAX_LEVEL = 5;
+var ROW_SPACING_BASE_WIDTH = 0.9;
+var ROW_SPACING_MIN_WIDTH = 0.3;
+
+function currentRowBarWidth() {
+    var step = (ROW_SPACING_BASE_WIDTH - ROW_SPACING_MIN_WIDTH) / ROW_SPACING_MAX_LEVEL;
+    return ROW_SPACING_BASE_WIDTH - ROW_SPACING_LEVEL * step;
+}
+
+function adjustRowSpacing(direction) {
+    if (direction > 0) {
+        ROW_SPACING_LEVEL = Math.min(ROW_SPACING_MAX_LEVEL, ROW_SPACING_LEVEL + 1);
+    } else {
+        ROW_SPACING_LEVEL = Math.max(0, ROW_SPACING_LEVEL - 1);
+    }
+    Plotly.restyle('plot', { width: currentRowBarWidth() });
+}
 
 function renderChart(filter) {
     var events = processEvents(filterEvents(filter));
     var ref    = ALL_EVENTS.length ? new Date(ALL_EVENTS[0].start_date).getTime() : Date.now();
+    var barWidth = currentRowBarWidth();
 
     var traces = FIXED.map(function(et) {
         var te    = events.filter(function(e) { return e.event_type === et; });
@@ -131,7 +203,7 @@ function renderChart(filter) {
             hovertemplate: dummy ? '<extra></extra>' : '%{customdata}<extra></extra>',
             textposition:  'none',
             marker:        { color: COLORS[et] || '#888', opacity: dummy ? 0 : 1 },
-            width:         dummy ? 0 : 0.9,
+            width:         dummy ? 0 : barWidth,
             showlegend:    false
         };
     });
@@ -152,8 +224,7 @@ function renderChart(filter) {
     // Default view should focus on where the real data lives — a single stray
     // outlier date (e.g. a 1970 record) shouldn't stretch the whole axis and
     // squeeze everything else into a sliver. Use the 2nd/98th percentile for
-    // the initial range; the modebar's "Autoscale"/"Reset axes" button still
-    // lets the user zoom out to see 100% of the data, outliers included.
+    // the initial range. This also becomes the zoom-out ceiling below.
     function percentileMs(arr, p) {
         var s = arr.slice().sort(function(a, b) { return a - b; });
         var idx = (s.length - 1) * p;
@@ -163,6 +234,12 @@ function renderChart(filter) {
     var allMs = sMs.concat(eMs);
     var tMin = allMs.length ? percentileMs(allMs, 0.02) - 864000000 : ref - 864000000;
     var tMax = allMs.length ? percentileMs(allMs, 0.98) + 864000000 : ref + 864000000;
+
+    // Zooming out can't go past the default view width — beyond this the
+    // bars are too compressed to read. Zooming in stays unrestricted.
+    MAX_VIEW_WIDTH = tMax - tMin;
+    DEFAULT_MIN = tMin;
+    DEFAULT_MAX = tMax;
 
     var layout = {
         xaxis: { type: 'date', title: 'Time', range: [tMin, tMax] },
@@ -188,7 +265,23 @@ function renderChart(filter) {
     var config = {
         responsive:             true,
         displayModeBar:         true,
-        modeBarButtonsToRemove: ['select2d', 'lasso2d']
+        // Built-in zoomIn2d/zoomOut2d zoom the TIME (x) axis — replaced with
+        // custom +/- buttons that instead adjust vertical spacing between
+        // the 6 category rows. Drag-to-zoom and scroll-zoom still control
+        // time, unaffected.
+        modeBarButtonsToRemove: ['select2d', 'lasso2d', 'zoomIn2d', 'zoomOut2d'],
+        modeBarButtonsToAdd: [
+            {
+                name: 'Increase row spacing',
+                icon: Plotly.Icons.zoom_plus,
+                click: function() { adjustRowSpacing(-1); }
+            },
+            {
+                name: 'Decrease row spacing',
+                icon: Plotly.Icons.zoom_minus,
+                click: function() { adjustRowSpacing(1); }
+            }
+        ]
     };
 
     if (!_chartReady) {
@@ -197,6 +290,11 @@ function renderChart(filter) {
         relocateModebar();
     } else {
         Plotly.react('plot', traces, layout, config);
+    }
+
+    if (!_relayoutBound) {
+        document.getElementById('plot').on('plotly_relayout', clampMaxZoom);
+        _relayoutBound = true;
     }
 }
 
@@ -208,17 +306,15 @@ window.setF = function(filter) {
     renderChart(filter);
 };
 
-// Load Plotly: try parent window first (Gradio loads it for chart components),
-// then fall back to the CDN script already in <head>.
+// Load Plotly from the CDN script already in <head> — NEVER borrow
+// window.parent.Plotly. Once Labelling Mode's gr.Plot() component has run,
+// window.parent.Plotly exists but is internally bound to the PARENT page's
+// document, not this iframe's — using it makes Plotly.newPlot('plot', ...)
+// fail with "No DOM element with id 'plot' exists on the page" even though
+// #plot is right here, because Plotly's own internals resolve against the
+// wrong document. Every render must use a Plotly instance loaded inside
+// THIS document.
 function initPlotly() {
-    try {
-        if (window.parent && window.parent.Plotly) {
-            window.Plotly = window.parent.Plotly;
-            renderChart('all');
-            return;
-        }
-    } catch (e) {}
-
     if (typeof Plotly !== 'undefined') {
         renderChart('all');
         return;
