@@ -30,4 +30,5 @@ dist/
 # Real patient data — never commit
 patient_data/
 patient_labels/
+admin_saved_flares/
 venv/

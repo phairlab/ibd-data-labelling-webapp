@@ -4,7 +4,7 @@ import plotly.graph_objects as go
 import json
 import os
 import textwrap
-from datetime import datetime
+from datetime import datetime, timezone
 import yaml
 from rmt23345_events import load_all_events
 
@@ -28,7 +28,6 @@ class PatientTimelineApp:
     This class manages patient medical event data, provides timeline visualizations,
     and allows doctors to mark flare periods in IBD patients. The app supports
     both date-based flare marking and monthly flare labeling.
-    
     Key Features:
     - Load and filter patient medical event data
     - Create interactive timeline visualizations
@@ -51,6 +50,7 @@ class PatientTimelineApp:
         self.current_patient_id = None     # ID of currently selected patient
         self.ranges = []                   # List of date-based flare periods: [(start_date, end_date, categories, reason), ...]
         self.fig = None                    # Current plotly figure object
+        self.last_loaded_utc = None        # UTC datetime of the most recent successful data load
         
         # === UI State Management ===
         self.editing_flare_index = None    # Index of flare currently being edited (for future use)
@@ -90,6 +90,7 @@ class PatientTimelineApp:
                     df['start_date'] = pd.to_datetime(df['start_date'], utc=True, errors='coerce').dt.tz_localize(None)
                     df['end_date']   = pd.to_datetime(df['end_date'],   utc=True, errors='coerce').dt.tz_localize(None)
                     self.combined_data = df
+                    self.last_loaded_utc = datetime.now(timezone.utc)
                     print(f"Loaded {len(df)} events from RMT23345 CSVs")
                     self.apply_patient_filter()
                 else:
@@ -151,6 +152,12 @@ class PatientTimelineApp:
         else:
             return "No data loaded"
     
+    def get_last_loaded_str(self):
+        """UTC timestamp of the most recent successful data load, for display in the UI."""
+        if self.last_loaded_utc is None:
+            return "Never"
+        return self.last_loaded_utc.strftime("%Y-%m-%d %H:%M UTC")
+
     def get_patient_choices(self):
         """
         Get list of available patient IDs for dropdown selection.
@@ -252,6 +259,7 @@ class PatientTimelineApp:
             df['start_date'] = pd.to_datetime(df['start_date'], utc=True, errors='coerce').dt.tz_localize(None)
             df['end_date']   = pd.to_datetime(df['end_date'],   utc=True, errors='coerce').dt.tz_localize(None)
             self.combined_data = df
+            self.last_loaded_utc = datetime.now(timezone.utc)
             self.apply_patient_filter()
         except Exception as e:
             return (
@@ -616,93 +624,93 @@ class PatientTimelineApp:
     
     def get_chart_info(self):
         """
-        Get chart information text for display in the UI.
-        
-        This method generates a comprehensive summary of the current patient's
-        data, including event counts, date ranges, and flare information.
-        It combines information from both date-based flares and monthly labels.
-        
+        Get chart information as a structured HTML card for display in the UI.
+
+        Shows total events, date range, and flare periods (both date-based and
+        monthly) as labelled fields and short lists, matching the styling of
+        the other info cards (patient panel / event counts / flare periods) —
+        not a scrolling plain-text block. The event-type breakdown is left out
+        here since it's already shown in the adjacent Event Counts card in the
+        same grid; repeating it in both tiles was redundant.
+
         Returns:
-            str: Formatted information text for display
+            str: HTML for the Chart Information card.
         """
+        from html import escape
+
+        _info_icon = ("<svg width='15' height='15' viewBox='0 0 24 24' fill='none' stroke='currentColor' "
+                      "stroke-width='2' stroke-linecap='round' stroke-linejoin='round'>"
+                      "<circle cx='12' cy='12' r='9'/><line x1='12' y1='11' x2='12' y2='16'/>"
+                      "<circle cx='12' cy='7.5' r='0.75' fill='currentColor' stroke='none'/></svg>")
+
         if self.current_patient_data is None:
-            return "No patient data loaded"
-        
-        # === Import Label Mapping ===
-        # Get the mapping from internal event names to readable display names
+            return (f"<div class='ui-card'><div class='card-title'>"
+                    f"<span class='icon-chip'>{_info_icon}</span>Chart information</div>"
+                    f"<div class='muted'>No patient data loaded</div></div>")
+
         from timeline_visualization import get_label_mapping
         label_mapping = get_label_mapping()
-        
-        # === Basic Patient Information ===
-        info = f"Patient ID: {self.current_patient_id}\n"
-        info += f"Total Events: {len(self.current_patient_data)}\n"
-        info += f"Date Range: {self.current_patient_data['start_date'].min().date()} to {self.current_patient_data['end_date'].max().date()}\n\n"
-        
-        # === Event Type Summary ===
-        info += "Event Types:\n"
-        event_counts = self.current_patient_data['event_type'].value_counts()
-        for event_type, count in event_counts.items():
-            # Convert internal event names to readable format
-            readable_name = label_mapping.get(event_type, event_type.replace('_', ' ').title())
-            info += f"  {readable_name}: {count}\n"
-        
-        # === Date-Based Flare Periods ===
-        # These are flares marked using the date range selection method
-        info += f"\nDate-based Flares: {len(self.ranges)}\n"
-        for i, flare_data in enumerate(self.ranges):
-            # === Handle Both Old and New Flare Formats ===
+
+        def readable(cats):
+            return ", ".join(label_mapping.get(c, c.replace('_', ' ').title()) for c in cats)
+
+        total_events = len(self.current_patient_data)
+        date_range = (f"{self.current_patient_data['start_date'].min().date()} "
+                      f"to {self.current_patient_data['end_date'].max().date()}")
+
+        header = (
+            f"<div class='info-row'><span>Total events</span><span>{total_events:,}</span></div>"
+            f"<div class='info-row'><span>Date range</span><span>{escape(date_range)}</span></div>"
+        )
+
+        # --- Date-based flares ---
+        date_items = []
+        for flare_data in self.ranges:
             if len(flare_data) == 3:  # Old format: (start, end, reason)
                 start_date, end_date, reason = flare_data
                 categories = []
             else:  # New format: (start, end, categories, reason)
                 start_date, end_date, categories, reason = flare_data
-            
-            # === Format Flare Information ===
-            info += f"  {i+1}. {pd.to_datetime(start_date).date()} to {pd.to_datetime(end_date).date()}"
-            
-            # Add categories if available
+            label = f"{pd.to_datetime(start_date).date()} to {pd.to_datetime(end_date).date()}"
             if categories:
-                readable_categories = [label_mapping.get(cat, cat.replace('_', ' ').title()) for cat in categories]
-                info += f" ({', '.join(readable_categories)})"
-            
-            # Add reason if available
-            if reason:
-                info += f": {reason}"
-            
-            info += "\n"
-        
-        # === Monthly Flares from Labelling Mode ===
-        # These are flares marked using the monthly labelling interface
+                label += f" ({readable(categories)})"
+            date_items.append((label, reason or ""))
+
+        date_section = (
+            f"<div class='chart-info-subhead'>Date-based flares ({len(date_items)})</div>"
+            + ("".join(
+                f"<div class='flare-row'><span class='flare-date'>{escape(label)}</span>"
+                f"<span class='flare-label'>{escape(reason)}</span></div>"
+                for label, reason in date_items)
+               if date_items else "<div class='muted'>None</div>")
+        )
+
+        # --- Monthly flares from Labelling Mode ---
         monthly_labels = self.load_monthly_labels()
-        # Filter to only show months marked as having evidence of flares
         monthly_flares = {k: v for k, v in monthly_labels.items() if v.get('evidence') == 'Yes'}
-        
-        info += f"\nMonthly Flares: {len(monthly_flares)}\n"
+        monthly_items = []
         for month_period_str, label_data in sorted(monthly_flares.items()):
             try:
-                # === Format Monthly Flare Information ===
-                period = pd.Period(month_period_str)
-                month_str = period.strftime('%B %Y')
-                info += f"  • {month_str}"
-                
-                # === Add Categories if Available ===
-                categories = label_data.get('categories', [])
-                if categories:
-                    readable_categories = [label_mapping.get(cat, cat.replace('_', ' ').title()) for cat in categories]
-                    info += f" ({', '.join(readable_categories)})"
-                
-                # === Add Reason if Available ===
-                reason = label_data.get('reason', '')
-                if reason:
-                    info += f": {reason}"
-                
-                info += "\n"
-                
+                month_str = pd.Period(month_period_str).strftime('%B %Y')
             except Exception as e:
                 print(f"Error formatting monthly flare: {e}")
                 continue
+            categories = label_data.get('categories', [])
+            label = month_str + (f" ({readable(categories)})" if categories else "")
+            monthly_items.append((label, label_data.get('reason', '')))
 
-        return info
+        monthly_section = (
+            f"<div class='chart-info-subhead'>Monthly flares ({len(monthly_items)})</div>"
+            + ("".join(
+                f"<div class='flare-row'><span class='flare-date'>{escape(label)}</span>"
+                f"<span class='flare-label'>{escape(reason)}</span></div>"
+                for label, reason in monthly_items)
+               if monthly_items else "<div class='muted'>None</div>")
+        )
+
+        return (f"<div class='ui-card'><div class='card-title'>"
+                f"<span class='icon-chip'>{_info_icon}</span>Chart information</div>"
+                f"{header}{date_section}{monthly_section}</div>")
 
     def load_patient_timeline_html(self, patient_id):
         """
@@ -736,7 +744,7 @@ class PatientTimelineApp:
             from timeline_visualization import build_timeline_html
             html   = build_timeline_html(self)
             info   = self.get_chart_info()
-            status = f"Chart loaded for Patient {self.current_patient_id} — filter using the buttons above the chart"
+            status = f"Chart loaded for Patient {self.current_patient_id}: filter using the buttons above the chart"
             return html, status, info
 
         except Exception as e:
