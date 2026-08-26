@@ -279,7 +279,7 @@ NEW_UI_CSS = """
   --body-text-color:var(--ptv-text) !important;
   --body-text-color-subdued:var(--ptv-text-secondary) !important;
   --block-title-text-color:var(--ptv-text) !important;
-  --block-label-text-color:var(--ptv-text) !important;
+  --block-label-text-color:var(--ptv-accent-deep) !important;
   --block-label-background-fill:var(--ptv-accent-soft) !important;
   --block-label-border-color:var(--ptv-accent-soft-border) !important;
   --block-border-color:var(--ptv-border) !important;
@@ -586,7 +586,7 @@ html, body{overflow-x:hidden !important;}
   flex:0 0 auto !important; box-sizing:border-box !important;
 }
 .chart-status-display textarea, .chart-status-display input{
-  background:var(--ptv-accent-soft) !important; border:none !important; border-left:3px solid var(--ptv-accent) !important;
+  background:var(--ptv-bg-elevated) !important; border:none !important; border-left:3px solid var(--ptv-accent) !important;
   border-radius:6px !important; color:var(--ptv-accent-deep) !important; font-weight:500 !important;
   box-shadow:none !important; padding-left:14px !important; resize:none !important;
 }
