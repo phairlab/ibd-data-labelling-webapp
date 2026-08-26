@@ -626,12 +626,13 @@ class PatientTimelineApp:
         """
         Get chart information as a structured HTML card for display in the UI.
 
-        Shows total events, date range, and flare periods (both date-based and
-        monthly) as labelled fields and short lists, matching the styling of
-        the other info cards (patient panel / event counts / flare periods) —
-        not a scrolling plain-text block. The event-type breakdown is left out
-        here since it's already shown in the adjacent Event Counts card in the
-        same grid; repeating it in both tiles was redundant.
+        Shows total events, date range, and a monthly-flare count as labelled
+        fields, matching the styling of the other info cards (patient panel /
+        event counts / flare periods). The actual flare-by-flare breakdown
+        (date-based and monthly) lives in the Flare Periods card instead —
+        repeating that full list here was redundant, so this card just gives
+        the count. The event-type breakdown is left out too, since it's
+        already shown in the adjacent Event Counts card in the same grid.
 
         Returns:
             str: HTML for the Chart Information card.
@@ -648,69 +649,22 @@ class PatientTimelineApp:
                     f"<span class='icon-chip'>{_info_icon}</span>Chart information</div>"
                     f"<div class='muted'>No patient data loaded</div></div>")
 
-        from timeline_visualization import get_label_mapping
-        label_mapping = get_label_mapping()
-
-        def readable(cats):
-            return ", ".join(label_mapping.get(c, c.replace('_', ' ').title()) for c in cats)
-
         total_events = len(self.current_patient_data)
         date_range = (f"{self.current_patient_data['start_date'].min().date()} "
                       f"to {self.current_patient_data['end_date'].max().date()}")
 
-        header = (
+        monthly_labels = self.load_monthly_labels()
+        monthly_flare_count = sum(1 for v in monthly_labels.values() if v.get('evidence') == 'Yes')
+
+        body = (
             f"<div class='info-row'><span>Total events</span><span>{total_events:,}</span></div>"
             f"<div class='info-row'><span>Date range</span><span>{escape(date_range)}</span></div>"
-        )
-
-        # --- Date-based flares ---
-        date_items = []
-        for flare_data in self.ranges:
-            if len(flare_data) == 3:  # Old format: (start, end, reason)
-                start_date, end_date, reason = flare_data
-                categories = []
-            else:  # New format: (start, end, categories, reason)
-                start_date, end_date, categories, reason = flare_data
-            label = f"{pd.to_datetime(start_date).date()} to {pd.to_datetime(end_date).date()}"
-            if categories:
-                label += f" ({readable(categories)})"
-            date_items.append((label, reason or ""))
-
-        date_section = (
-            f"<div class='chart-info-subhead'>Date-based flares ({len(date_items)})</div>"
-            + ("".join(
-                f"<div class='flare-row'><span class='flare-date'>{escape(label)}</span>"
-                f"<span class='flare-label'>{escape(reason)}</span></div>"
-                for label, reason in date_items)
-               if date_items else "<div class='muted'>None</div>")
-        )
-
-        # --- Monthly flares from Labelling Mode ---
-        monthly_labels = self.load_monthly_labels()
-        monthly_flares = {k: v for k, v in monthly_labels.items() if v.get('evidence') == 'Yes'}
-        monthly_items = []
-        for month_period_str, label_data in sorted(monthly_flares.items()):
-            try:
-                month_str = pd.Period(month_period_str).strftime('%B %Y')
-            except Exception as e:
-                print(f"Error formatting monthly flare: {e}")
-                continue
-            categories = label_data.get('categories', [])
-            label = month_str + (f" ({readable(categories)})" if categories else "")
-            monthly_items.append((label, label_data.get('reason', '')))
-
-        monthly_section = (
-            f"<div class='chart-info-subhead'>Monthly flares ({len(monthly_items)})</div>"
-            + ("".join(
-                f"<div class='flare-row'><span class='flare-date'>{escape(label)}</span>"
-                f"<span class='flare-label'>{escape(reason)}</span></div>"
-                for label, reason in monthly_items)
-               if monthly_items else "<div class='muted'>None</div>")
+            f"<div class='info-row'><span>Monthly flares</span><span class='count'>{monthly_flare_count}</span></div>"
         )
 
         return (f"<div class='ui-card'><div class='card-title'>"
                 f"<span class='icon-chip'>{_info_icon}</span>Chart information</div>"
-                f"{header}{date_section}{monthly_section}</div>")
+                f"{body}</div>")
 
     def load_patient_timeline_html(self, patient_id):
         """
