@@ -167,39 +167,147 @@ NEW_UI_CSS = """
 .style-inject{ display:block !important; padding:0 !important; margin:0 !important;
   min-height:0 !important; height:0 !important; border:none !important; overflow:hidden !important; }
 
-/* ---- force a LIGHT theme no matter the OS/browser preference ---- */
+/* ---- theme tokens ----
+   The app always renders in ITS OWN light/dark palette, never the OS/
+   browser's — .dark is stripped by JS on load regardless of prefers-
+   color-scheme, and which of the two we show is controlled purely by
+   [data-theme] on <html>, toggled by the sun/moon button in the sidebar
+   and persisted in localStorage (see ptvToggleTheme in FORCE_LIGHT_JS). */
 :root, .dark { color-scheme: light !important; }
+:root[data-theme="dark"] { color-scheme: dark !important; }
+
+:root{
+  --ptv-bg:#eef4f1;
+  --ptv-bg-elevated:#ffffff;
+  --ptv-border:#dfe8e4;
+  --ptv-border-soft:#eef3f1;
+  --ptv-text:#152826;
+  --ptv-text-heading:#0f2624;
+  --ptv-text-secondary:#5a6b67;
+  --ptv-text-body:#28423d;
+  --ptv-text-muted:#8a9a96;
+  --ptv-accent:#00726f;
+  --ptv-accent-hover:#00524f;
+  /* solid-fill variant for surfaces that carry WHITE text/icons on top
+     (primary buttons, checked checkboxes) — identical to --ptv-accent in
+     light mode, but kept separately dialled-back in dark mode so white
+     text stays readable (a bright accent teal fails contrast there). */
+  --ptv-accent-solid:#00726f;
+  --ptv-accent-solid-hover:#00615e;
+  --ptv-accent-deep:#00504f;
+  --ptv-accent-deep-alt:#006867;
+  --ptv-accent-soft:#dcefec;
+  --ptv-accent-soft-strong:#cbe6e1;
+  --ptv-accent-soft-border:#b9dcd6;
+  --ptv-accent-checked-bg:#e0f2f0;
+  --ptv-accent-teal-gray:#3d6d68;
+  /* recessed "well" tone for answer pills nested inside a card (category
+     checkboxes, saved-label rows) — identical to the card in light mode
+     (a thin border alone reads fine there), but a distinct, darker shade
+     in dark mode so nested pills don't disappear into the card behind
+     them (see --ptv-well-bg dark override). */
+  --ptv-well-bg:#ffffff;
+  /* secondary buttons (Previous/Next Month, Preview Previous/Next Month,
+     Clear Label) — a plain-white button already contrasts fine against
+     both the card and page in light mode. */
+  --ptv-btn-secondary-bg:#ffffff;
+  --ptv-btn-secondary-bg-hover:#f2f7f5;
+  --ptv-input-border:#d7e1de;
+  --ptv-input-border-strong:#b9c7c3;
+  --ptv-danger-bg:#fdf4f4;
+  --ptv-danger-border:#d1495b;
+  --ptv-stat-grad-start:#ffffff;
+  --ptv-stat-grad-end:#f7fbfa;
+  --ptv-code-bg:#152826;
+  --ptv-code-text:#dcefec;
+  --ptv-shadow-1:rgba(21,64,58,.06);
+  --ptv-shadow-2:rgba(21,64,58,.04);
+  --ptv-focus-shadow:rgba(0,104,103,.12);
+}
+:root[data-theme="dark"]{
+  --ptv-bg:#0f1f1d;
+  --ptv-bg-elevated:#22443f;
+  --ptv-border:#3f645d;
+  --ptv-border-soft:#35544e;
+  --ptv-text:#e4efec;
+  --ptv-text-heading:#f5faf8;
+  --ptv-text-secondary:#a9c2bc;
+  --ptv-text-body:#c3d8d3;
+  --ptv-text-muted:#87a09a;
+  --ptv-accent:#35b8ab;
+  --ptv-accent-hover:#4fd0c2;
+  --ptv-accent-solid:#14766e;
+  --ptv-accent-solid-hover:#1c8b81;
+  --ptv-accent-deep:#8fe3d6;
+  --ptv-accent-deep-alt:#5fd2c3;
+  /* Lighter/more saturated than --ptv-bg-elevated on purpose — these boxes
+     (Chart Status, Last Loaded, block-label chips like "Format") need to
+     read as a raised highlighted plate against the card, not blend into
+     it or the page behind it. */
+  --ptv-accent-soft:#2c554c;
+  --ptv-accent-soft-strong:#35655a;
+  --ptv-accent-soft-border:#437368;
+  --ptv-accent-checked-bg:#2f5f54;
+  --ptv-accent-teal-gray:#8fbdb4;
+  /* Recessed well tone — darker than --ptv-bg-elevated so nested answer
+     pills (category checkboxes, saved-label rows) sit visibly BELOW their
+     card instead of matching its colour exactly. */
+  --ptv-well-bg:#132a25;
+  --ptv-btn-secondary-bg:var(--ptv-bg);
+  --ptv-btn-secondary-bg-hover:var(--ptv-accent-soft);
+  --ptv-input-border:#345450;
+  --ptv-input-border-strong:#4a6c67;
+  --ptv-danger-bg:#3a2224;
+  --ptv-danger-border:#e0697a;
+  --ptv-stat-grad-start:#274d47;
+  --ptv-stat-grad-end:#1e3d38;
+  --ptv-code-bg:#0a1715;
+  --ptv-code-text:#bcded8;
+  --ptv-shadow-1:rgba(0,0,0,.45);
+  --ptv-shadow-2:rgba(0,0,0,.3);
+  --ptv-focus-shadow:rgba(53,184,171,.22);
+}
+
 :root, gradio-app, .gradio-container, .dark, .dark .gradio-container{
-  --body-background-fill:#eef4f1 !important;
-  --background-fill-primary:#eef4f1 !important;
-  --background-fill-secondary:#eef4f1 !important;
+  --body-background-fill:var(--ptv-bg) !important;
+  --background-fill-primary:var(--ptv-bg) !important;
+  --background-fill-secondary:var(--ptv-bg) !important;
   --block-background-fill:transparent !important;
   --panel-background-fill:transparent !important;
-  --input-background-fill:#ffffff !important;
-  --border-color-primary:#dbe6e1 !important;
-  --body-text-color:#152826 !important;
-  --body-text-color-subdued:#5a6b67 !important;
-  --block-title-text-color:#152826 !important;
-  --block-label-text-color:#152826 !important;
-  --button-primary-background-fill:#00726f !important;
-  --button-primary-background-fill-hover:#00524f !important;
+  --input-background-fill:var(--ptv-bg-elevated) !important;
+  --border-color-primary:var(--ptv-border) !important;
+  --body-text-color:var(--ptv-text) !important;
+  --body-text-color-subdued:var(--ptv-text-secondary) !important;
+  --block-title-text-color:var(--ptv-text) !important;
+  --block-label-text-color:var(--ptv-text) !important;
+  --block-label-background-fill:var(--ptv-accent-soft) !important;
+  --block-label-border-color:var(--ptv-accent-soft-border) !important;
+  --block-border-color:var(--ptv-border) !important;
+  --table-border-color:var(--ptv-border) !important;
+  --table-even-background-fill:var(--ptv-bg-elevated) !important;
+  --table-odd-background-fill:var(--ptv-bg) !important;
+  --neutral-50:var(--ptv-bg) !important;
+  --button-primary-background-fill:var(--ptv-accent-solid) !important;
+  --button-primary-background-fill-hover:var(--ptv-accent-solid-hover) !important;
   --button-primary-text-color:#ffffff !important;
-  --button-secondary-background-fill:#ffffff !important;
-  --button-secondary-border-color:#c7d6d0 !important;
-  --color-accent:#00726f !important;
-  --color-accent-soft:#dcefec !important;
-  --link-text-color:#00726f !important;
-  --checkbox-background-color-selected:#00726f !important;
-  --slider-color:#00726f !important;
+  --button-secondary-background-fill:var(--ptv-btn-secondary-bg) !important;
+  --button-secondary-background-fill-hover:var(--ptv-btn-secondary-bg-hover) !important;
+  --button-secondary-border-color:var(--ptv-input-border-strong) !important;
+  --button-secondary-text-color:var(--ptv-text) !important;
+  --color-accent:var(--ptv-accent) !important;
+  --color-accent-soft:var(--ptv-accent-soft) !important;
+  --link-text-color:var(--ptv-accent) !important;
+  --checkbox-background-color-selected:var(--ptv-accent) !important;
+  --slider-color:var(--ptv-accent) !important;
 }
-.gradio-container, body, gradio-app, .dark body, .dark gradio-app{background:#eef4f1 !important;}
+.gradio-container, body, gradio-app, .dark body, .dark gradio-app{background:var(--ptv-bg) !important;}
 .gradio-container input, .gradio-container textarea, .gradio-container select{
-  background:#ffffff !important; color:#152826 !important;
+  background:var(--ptv-bg-elevated) !important; color:var(--ptv-text) !important;
 }
 .gradio-container h1, .gradio-container h2, .gradio-container h3,
 .gradio-container .prose, .gradio-container .prose *,
 .gradio-container p, .gradio-container label, .gradio-container span{
-  color:#152826 !important;
+  color:var(--ptv-text) !important;
 }
 .gradio-container button.primary, .gradio-container button.primary *{ color:#ffffff !important; }
 
@@ -240,6 +348,7 @@ NEW_UI_CSS = """
 }
 #sidebar-toggle-arrow:hover{background:rgba(255,255,255,.12);}
 #sidebar-toggle-arrow .arrow-expand{display:none;}
+
 /* ---- collapsed sidebar: narrow rail showing ONLY the expand arrow — the
    brand mark is hidden too, since brand+arrow together don't fit a narrow
    rail without the arrow getting clipped. ---- */
@@ -251,8 +360,23 @@ NEW_UI_CSS = """
 :root[data-sidebar="collapsed"] #page_label, :root[data-sidebar="collapsed"] #page_guide{
   margin-left:52px !important; width:calc(100% - 52px) !important; max-width:calc(100% - 52px) !important;
 }
+/* ---- "Navigation" section row: label on the left, light/dark theme toggle
+   on the right — sits just below the collapse arrow, inline with the label
+   text. Icon shows the DESTINATION theme (moon while light = click for
+   dark; sun while dark = click for light), not the current one. ---- */
+#sidebar .nav-section-row{display:flex; align-items:center; justify-content:space-between;
+  margin:16px 4px 6px;}
 #sidebar .nav-section, #sidebar .ctx-title{font-size:11px; letter-spacing:.09em;
-  color:#9dbcb6 !important; font-weight:600; margin:16px 4px 6px; text-transform:uppercase;}
+  color:#9dbcb6 !important; font-weight:600; text-transform:uppercase;}
+#sidebar .nav-section-row .nav-section{margin:0;}
+#theme-toggle{
+  display:flex; align-items:center; justify-content:center; width:32px; height:32px;
+  border-radius:9px; cursor:pointer; flex-shrink:0;
+}
+#theme-toggle:hover{background:rgba(255,255,255,.12);}
+#theme-toggle .icon-sun{display:none;}
+:root[data-theme="dark"] #theme-toggle .icon-sun{display:block;}
+:root[data-theme="dark"] #theme-toggle .icon-moon{display:none;}
 #sidebar button.nav-btn{
   justify-content:flex-start !important; text-align:left !important;
   background:transparent !important; border:none !important; box-shadow:none !important;
@@ -287,17 +411,17 @@ html, body{overflow-x:hidden !important;}
   padding:14px 32px 14px !important;
 }
 #page_overview *, #page_timeline *, #page_label *, #page_guide *{ box-sizing:border-box !important; }
-.card-divider{border-top:1px solid #eaf0ed; margin:16px 0 14px;}
+.card-divider{border-top:1px solid var(--ptv-border-soft); margin:16px 0 14px;}
 /* the title is the FIRST line of content (matches the sidebar brand being the
    first line of sidebar content) — the eyebrow rides inline as a badge instead
    of sitting above the title, which is what previously threw off alignment */
-.page-head{font-size:28px; font-weight:800; color:#0f2624 !important;
+.page-head{font-size:28px; font-weight:800; color:var(--ptv-text-heading) !important;
   display:flex; align-items:center; gap:12px; margin-bottom:16px; margin-top:0;
   letter-spacing:-.02em;}
 .page-head .pg-dot{width:10px; height:10px; border-radius:50%;
   background:#33a68c; display:inline-block; box-shadow:0 0 0 4px rgba(51,166,140,.18);}
 .page-badge{font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
-  color:#00726f !important; background:#dcefec; padding:4px 10px; border-radius:20px;}
+  color:var(--ptv-accent) !important; background:var(--ptv-accent-soft); padding:4px 10px; border-radius:20px;}
 /* Timeline Viewer page fills exactly the visible viewport height (no more,
    no less) so the chart + side panel row stretch together to use the
    available space and the page never needs to scroll. Because align-items:
@@ -346,8 +470,8 @@ html, body{overflow-x:hidden !important;}
 .load-btn-col{justify-content:flex-end !important;}
 .load-btn-col .block{flex:1 1 auto !important; display:flex !important;}
 .load-btn{flex:1 1 auto !important; height:100% !important;}
-.btn-light-teal{background:#dcefec !important; color:#00504f !important; border:1px solid #b9dcd6 !important;}
-.btn-light-teal:hover{background:#cbe6e1 !important;}
+.btn-light-teal{background:var(--ptv-accent-soft) !important; color:var(--ptv-accent-deep) !important; border:1px solid var(--ptv-accent-soft-border) !important;}
+.btn-light-teal:hover{background:var(--ptv-accent-soft-strong) !important;}
 
 /* Labelling Mode: Labelling Period / Flare Assessment / Saved Labels side by
    side in one row, then the graph full-width below. */
@@ -368,24 +492,24 @@ html, body{overflow-x:hidden !important;}
 /* .guide-card itself is a flex container (Gradio Column default) — multicol
    has no effect on flex children, so target the actual markdown text wrapper
    nested inside it instead. */
-.guide-card .prose{column-count:2 !important; column-gap:48px !important; column-rule:1px solid #eaf0ed !important;}
+.guide-card .prose{column-count:2 !important; column-gap:48px !important; column-rule:1px solid var(--ptv-border-soft) !important;}
 .guide-card h2{column-span:all !important; font-size:22px !important; font-weight:800 !important;
-  color:#0f2624 !important; margin:0 0 18px !important; letter-spacing:-.01em;}
-.guide-card h3{font-size:16px !important; font-weight:700 !important; color:#00504f !important;
-  margin:26px 0 10px !important; padding-bottom:6px !important; border-bottom:2px solid #dcefec !important;
+  color:var(--ptv-text-heading) !important; margin:0 0 18px !important; letter-spacing:-.01em;}
+.guide-card h3{font-size:16px !important; font-weight:700 !important; color:var(--ptv-accent-deep) !important;
+  margin:26px 0 10px !important; padding-bottom:6px !important; border-bottom:2px solid var(--ptv-accent-soft) !important;
   break-after:avoid !important;}
 .guide-card h3:first-of-type{margin-top:0 !important;}
-.guide-card p, .guide-card li{font-size:14px !important; line-height:1.65 !important; color:#28423d !important;}
+.guide-card p, .guide-card li{font-size:14px !important; line-height:1.65 !important; color:var(--ptv-text-body) !important;}
 .guide-card ul{margin:6px 0 14px !important; padding-left:22px !important; break-inside:avoid !important;}
 .guide-card li{margin-bottom:4px !important;}
 .guide-card pre{break-inside:avoid !important;}
-.guide-card strong{color:#152826 !important;}
-.guide-card code{background:#eef4f1 !important; color:#00504f !important; padding:1px 6px !important;
+.guide-card strong{color:var(--ptv-text-heading) !important;}
+.guide-card code{background:var(--ptv-bg) !important; color:var(--ptv-accent-deep) !important; padding:1px 6px !important;
   border-radius:4px !important; font-size:12.5px !important;}
-.guide-card pre{background:#152826 !important; border-radius:8px !important; padding:14px 16px !important;
+.guide-card pre{background:var(--ptv-code-bg) !important; border-radius:8px !important; padding:14px 16px !important;
   overflow-x:auto !important; margin:10px 0 16px !important;}
 .gradio-container .guide-card pre code, .gradio-container .guide-card pre code *{
-  background:transparent !important; color:#dcefec !important; padding:0 !important;
+  background:transparent !important; color:var(--ptv-code-text) !important; padding:0 !important;
 }
 .panel-cell.ui-card{display:flex !important; flex-direction:column !important; justify-content:flex-start !important;}
 @media (max-width:820px){
@@ -396,60 +520,60 @@ html, body{overflow-x:hidden !important;}
 }
 
 /* ---- cards ---- */
-.ui-card{background:#ffffff !important; border:1px solid #dfe8e4 !important;
+.ui-card{background:var(--ptv-bg-elevated) !important; border:1px solid var(--ptv-border) !important;
   border-radius:14px !important; padding:20px !important;
-  box-shadow:0 1px 3px rgba(21,64,58,.06), 0 1px 2px rgba(21,64,58,.04) !important;}
-.card-title{font-weight:700; color:#0f2624 !important; margin-bottom:14px; font-size:16px;
+  box-shadow:0 1px 3px var(--ptv-shadow-1), 0 1px 2px var(--ptv-shadow-2) !important;}
+.card-title{font-weight:700; color:var(--ptv-text-heading) !important; margin-bottom:14px; font-size:16px;
   display:flex; align-items:center; gap:8px; letter-spacing:-.01em;}
 .card-title .icon-chip{display:inline-flex; align-items:center; justify-content:center;
-  width:26px; height:26px; border-radius:8px; background:#dcefec; font-size:14px;}
+  width:26px; height:26px; border-radius:8px; background:var(--ptv-accent-soft); font-size:14px;}
 .info-row{display:flex; justify-content:space-between; padding:8px 0;
-  border-bottom:1px solid #eef3f1; font-size:14px; color:#152826 !important;}
+  border-bottom:1px solid var(--ptv-border-soft); font-size:14px; color:var(--ptv-text) !important;}
 .info-row:last-child{border-bottom:none;}
-.info-row .count{color:#00726f !important; font-weight:700;}
-.muted{color:#8a9a96 !important; font-size:13px; padding:6px 0;}
+.info-row .count{color:var(--ptv-accent) !important; font-weight:700;}
+.muted{color:var(--ptv-text-muted) !important; font-size:13px; padding:6px 0;}
 
 /* ---- stat tiles (Data Overview) — tonal accent bar per tile ---- */
 .stat-row{display:grid; grid-template-columns:repeat(4, 1fr); gap:16px; margin-bottom:16px;}
 .stat-tile{padding:18px 20px !important; position:relative; overflow:hidden; min-height:80px;
-  background:linear-gradient(180deg,#ffffff 0%,#f7fbfa 100%) !important;}
+  background:linear-gradient(180deg,var(--ptv-stat-grad-start) 0%,var(--ptv-stat-grad-end) 100%) !important;}
 .stat-tile::before{content:""; position:absolute; top:0; left:0; right:0; height:4px;
-  background:linear-gradient(90deg,#00726f,#4fae8b);}
-.stat-label{font-size:13px; color:#5a6b67 !important; margin-bottom:8px; font-weight:600;
+  background:linear-gradient(90deg,var(--ptv-accent),#4fae8b);}
+.stat-label{font-size:13px; color:var(--ptv-text-secondary) !important; margin-bottom:8px; font-weight:600;
   text-transform:uppercase; letter-spacing:.04em;}
-.stat-value{font-size:32px; font-weight:800; color:#0f2624 !important; letter-spacing:-.02em;}
+.stat-value{font-size:32px; font-weight:800; color:var(--ptv-text-heading) !important; letter-spacing:-.02em;}
 .card-grid-2{display:grid; grid-template-columns:1fr 1fr; gap:18px;}
 .card-grid-3{display:flex !important; gap:16px !important; align-items:stretch !important;}
 .card-grid-3 > .ui-card{flex:1 1 0 !important; display:flex !important; flex-direction:column !important; min-height:0;}
 .card-cta{margin-top:auto !important; padding-top:10px;}
 
 /* ---- flare period rows ---- */
-.flare-row{border-left:3px solid #d1495b; background:#fdf4f4; border-radius:0 8px 8px 0;
+.flare-row{border-left:3px solid var(--ptv-danger-border); background:var(--ptv-danger-bg); border-radius:0 8px 8px 0;
   padding:7px 0 7px 12px; margin-bottom:8px;}
-.flare-date{display:block; font-weight:600; color:#152826 !important; font-size:13px;}
-.flare-label{display:block; color:#5a6b67 !important; font-size:12px;}
+.flare-date{display:block; font-weight:600; color:var(--ptv-text) !important; font-size:13px;}
+.flare-label{display:block; color:var(--ptv-text-secondary) !important; font-size:12px;}
 
 /* ---- flare category checkbox grid (Labelling Mode) — the square itself
    fills solid dark turquoise when checked, instead of just highlighting
    the label around it. ---- */
 .category-grid .wrap{display:grid !important; grid-template-columns:1fr 1fr; gap:8px !important;}
-.category-grid label{border:1px solid #d7e1de !important; border-radius:10px !important;
-  padding:9px 10px !important; background:#fff !important; justify-content:flex-start !important;}
-.category-grid input:checked + span{color:#006867 !important; font-weight:600;}
+.category-grid label{border:1px solid var(--ptv-input-border) !important; border-radius:10px !important;
+  padding:9px 10px !important; background:var(--ptv-well-bg) !important; justify-content:flex-start !important;}
+.category-grid input:checked + span{color:var(--ptv-accent-deep-alt) !important; font-weight:600;}
 .category-grid input[type=checkbox]{
   width:16px !important; height:16px !important; border-radius:4px !important;
-  border:1.5px solid #b9c7c3 !important; background-color:#ffffff !important;
+  border:1.5px solid var(--ptv-input-border-strong) !important; background-color:var(--ptv-well-bg) !important;
   background-image:none !important; appearance:none !important; -webkit-appearance:none !important;
 }
 .category-grid input[type=checkbox]:checked{
-  background-color:#00726f !important; border-color:#00726f !important;
+  background-color:var(--ptv-accent-solid) !important; border-color:var(--ptv-accent-solid) !important;
   background-image:none !important;
 }
 
 /* ---- section title underline retint (legacy labelling CSS) ---- */
-.section-title{color:#152826 !important; border-bottom-color:#006867 !important;}
+.section-title{color:var(--ptv-text) !important; border-bottom-color:var(--ptv-accent-deep-alt) !important;}
 .gr-form:focus-within, .clean-month-dropdown .gr-form:focus-within{
-  border-color:#006867 !important; box-shadow:0 0 0 3px rgba(0,104,103,.12) !important;
+  border-color:var(--ptv-accent-deep-alt) !important; box-shadow:0 0 0 3px var(--ptv-focus-shadow) !important;
 }
 
 /* ---- Chart Status: reads as a status badge, not a plain input box ---- */
@@ -457,46 +581,46 @@ html, body{overflow-x:hidden !important;}
   flex:0 0 auto !important; box-sizing:border-box !important;
 }
 .chart-status-display textarea, .chart-status-display input{
-  background:#dcefec !important; border:none !important; border-left:3px solid #00726f !important;
-  border-radius:6px !important; color:#00504f !important; font-weight:500 !important;
+  background:var(--ptv-accent-soft) !important; border:none !important; border-left:3px solid var(--ptv-accent) !important;
+  border-radius:6px !important; color:var(--ptv-accent-deep) !important; font-weight:500 !important;
   box-shadow:none !important; padding-left:14px !important; resize:none !important;
 }
 .chart-status-col{justify-content:center !important;}
 
 /* ---- Export format / Saved Labels / Flare Assessment radio style: bordered
-   pill cards, classic radio dot — outer ring stays white/uncoloured, only
-   the INNER dot fills with dark turquoise when selected. ---- */
-.saved-labels-list label, .filled-radio label{border:1px solid #d7e1de !important; border-radius:10px !important;
-  padding:8px 10px !important; background:#fff !important; font-size:13px !important;}
+   pill cards, classic radio dot — outer ring stays neutral/uncoloured, only
+   the INNER dot fills with the accent colour when selected. ---- */
+.saved-labels-list label, .filled-radio label{border:1px solid var(--ptv-input-border) !important; border-radius:10px !important;
+  padding:8px 10px !important; background:var(--ptv-well-bg) !important; font-size:13px !important;}
 .saved-labels-list label:has(input:checked), .filled-radio label:has(input:checked){
-  background:#e0f2f0 !important; border-color:#00726f !important;
+  background:var(--ptv-accent-checked-bg) !important; border-color:var(--ptv-accent) !important;
 }
-.saved-labels-list input:checked + span, .filled-radio input:checked + span{color:#00726f !important; font-weight:600;}
+.saved-labels-list input:checked + span, .filled-radio input:checked + span{color:var(--ptv-accent) !important; font-weight:600;}
 .saved-labels-list input[type=radio], .filled-radio input[type=radio]{
   width:16px !important; height:16px !important; border-radius:50% !important;
-  border:1.5px solid #b9c7c3 !important; background-color:#ffffff !important;
+  border:1.5px solid var(--ptv-input-border-strong) !important; background-color:var(--ptv-well-bg) !important;
 }
 .saved-labels-list input[type=radio]:checked, .filled-radio input[type=radio]:checked{
-  border-color:#00726f !important; background-color:#ffffff !important;
-  background-image:radial-gradient(circle, #00726f 40%, transparent 42%) !important;
+  border-color:var(--ptv-accent) !important; background-color:var(--ptv-well-bg) !important;
+  background-image:radial-gradient(circle, var(--ptv-accent) 40%, transparent 42%) !important;
   background-size:16px 16px !important; background-position:center !important; background-repeat:no-repeat !important;
 }
-.no-saved-labels-box{color:#3d6d68 !important; font-weight:400 !important; font-size:14px !important; min-height:44px !important;}
+.no-saved-labels-box{color:var(--ptv-accent-teal-gray) !important; font-weight:400 !important; font-size:14px !important; min-height:44px !important;}
 
 /* ---- "last loaded" box on the Load Data page ---- */
 .last-loaded-box{
-  color:#8a9a96 !important; font-size:14px; font-weight:400;
-  background:#dcefec; border-radius:8px; padding:8px 10px; margin-bottom:10px;
+  color:var(--ptv-text-muted) !important; font-size:14px; font-weight:400;
+  background:var(--ptv-accent-soft); border-radius:8px; padding:8px 10px; margin-bottom:10px;
 }
 
 /* ---- Labelling Mode monthly plot toolbar: dedicated bar for the relocated
    Plotly modebar, sitting below the Previous/Next Month buttons. ---- */
 #monthly-plot-toolbar{
-  background:#dcefec; border-radius:8px; padding:8px 16px 8px 12px; margin:0 0 10px;
-  border:1px solid #b9dcd6; display:flex; align-items:center; justify-content:flex-start;
+  background:var(--ptv-accent-soft); border-radius:8px; padding:8px 16px 8px 12px; margin:0 0 10px;
+  border:1px solid var(--ptv-accent-soft-border); display:flex; align-items:center; justify-content:flex-start;
   flex-wrap:nowrap !important; min-height:20px;
 }
-#monthly-plot-label{ font-size:14px; font-weight:600; color:#152826; white-space:nowrap; flex:0 0 auto; }
+#monthly-plot-label{ font-size:14px; font-weight:600; color:var(--ptv-text); white-space:nowrap; flex:0 0 auto; }
 #monthly-plot-toolbar .modebar-container{
   position:static !important; margin-left:auto !important; width:auto !important;
   display:flex !important; justify-content:flex-end !important;
@@ -509,6 +633,17 @@ html, body{overflow-x:hidden !important;}
 }
 #monthly-plot-toolbar .modebar-btn svg{ width:20px !important; height:20px !important; }
 #monthly-plot-toolbar .modebar-btn{ padding:4px 6px !important; }
+
+/* ---- dark theme: static button icons (static/icons/*.svg) are pre-coloured
+   PNG-like image files, not inline currentColor SVG, so CSS can't recolour
+   them directly. The "-white" icons already read fine on any background;
+   the "-dark"/"-teal" ones (Previous/Next Month chevrons, the Upload
+   config button) are dark strokes that would vanish against a dark button
+   in dark mode — invert+brighten them so they stay legible. ---- */
+:root[data-theme="dark"] img[src*="-dark.svg"],
+:root[data-theme="dark"] img[src*="-teal.svg"]{
+  filter: invert(1) brightness(1.5) !important;
+}
 
 footer{display:none !important;}
 </style>
@@ -526,6 +661,26 @@ SIDEBAR_BRAND_HTML = (
     "<svg class='arrow-expand' viewBox='0 0 16 16' fill='none' stroke='#dbe8e4' stroke-width='2.4' "
     "stroke-linecap='round' stroke-linejoin='round'><path d='M6 2l6 6-6 6'/></svg>"
     "</span></div>"
+)
+
+# Sits in the "Navigation" section row (right-aligned, below the collapse
+# arrow) rather than the brand row — icon shows the DESTINATION theme, so a
+# crescent moon while light means "click for dark", and a sun while dark
+# means "click for light".
+NAV_SECTION_HTML = (
+    "<div class='nav-section-row'>"
+    "<span class='nav-section'>Navigation</span>"
+    "<span id='theme-toggle' onclick='window.ptvToggleTheme()' title='Toggle light/dark theme'>"
+    "<svg class='icon-sun' viewBox='0 0 24 24' width='20' height='20' fill='none' stroke='#dbe8e4' "
+    "stroke-width='2' stroke-linecap='round' stroke-linejoin='round'>"
+    "<circle cx='12' cy='12' r='4.2'/>"
+    "<path d='M12 2.5v2.4M12 19.1v2.4M4.2 4.2l1.7 1.7M18.1 18.1l1.7 1.7M2.5 12h2.4M19.1 12h2.4"
+    "M4.2 19.8l1.7-1.7M18.1 5.9l1.7-1.7'/></svg>"
+    "<svg class='icon-moon' viewBox='0 0 24 24' width='20' height='20' fill='none' stroke='#dbe8e4' "
+    "stroke-width='2' stroke-linecap='round' stroke-linejoin='round'>"
+    "<path d='M20 14.5A8.5 8.5 0 1 1 9.5 4a6.8 6.8 0 0 0 10.5 10.5z'/></svg>"
+    "</span>"
+    "</div>"
 )
 
 # Remove the 'dark' class Gradio/browser may add on load, so the app always
@@ -547,6 +702,39 @@ FORCE_LIGHT_JS = """
     document.documentElement.classList.remove('dark');
     document.body.classList.remove('dark');
     document.querySelectorAll('.dark').forEach(el => el.classList.remove('dark'));
+
+    // Light/dark theme — always driven by our own [data-theme] attribute and
+    // localStorage choice, never by the OS/browser's prefers-color-scheme
+    // (matches the sidebar-collapse persistence pattern just below).
+    function applyTimelineChartTheme() {
+        // The Timeline Viewer chart lives in a same-origin srcdoc <iframe> —
+        // it mirrors [data-theme] itself on load (see ptvSyncTheme inside
+        // the iframe), but an already-open chart needs to be told to re-sync
+        // and re-render its Plotly colours, since those are baked into the
+        // SVG rather than styled via CSS.
+        document.querySelectorAll('iframe').forEach(function(f) {
+            try {
+                if (f.contentWindow && f.contentWindow.ptvSyncTheme) f.contentWindow.ptvSyncTheme();
+                if (f.contentWindow && f.contentWindow.ptvApplyTheme) f.contentWindow.ptvApplyTheme();
+            } catch (e) {}
+        });
+    }
+
+    try {
+        var savedTheme = localStorage.getItem('ptv-theme');
+        if (savedTheme === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+        else document.documentElement.removeAttribute('data-theme');
+    } catch (e) {}
+
+    window.ptvToggleTheme = function() {
+        var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        var nowDark = !isDark;
+        if (nowDark) document.documentElement.setAttribute('data-theme', 'dark');
+        else document.documentElement.removeAttribute('data-theme');
+        try { localStorage.setItem('ptv-theme', nowDark ? 'dark' : 'light'); } catch (e) {}
+        applyTimelineChartTheme();
+    };
+    applyTimelineChartTheme();
 
     // Which #sidebar direct child to keep visible when collapsed, and the
     // arrow icons' visibility, are driven straight from JS rather than CSS
@@ -818,7 +1006,7 @@ def create_interface():
             .labelling-top-row { align-items: flex-start !important; margin-bottom: 25px !important; }
             .labelling-top-row .section-title { margin-top: 0 !important; }
             .gradio-button { border-radius: 8px !important; font-weight: 500 !important; transition: all 0.2s ease !important; }
-            .gr-plot { border-radius: 10px !important; border: 1px solid #e5e7eb !important; overflow: hidden !important; }
+            .gr-plot { border-radius: 10px !important; border: 1px solid var(--ptv-border) !important; overflow: hidden !important; }
             .gradio-group { border: none !important; background: none !important; padding: 0 !important; margin: 0 !important; }
             </style>
             """
@@ -832,7 +1020,7 @@ def create_interface():
         # ====================================================================
         with gr.Column(elem_id="sidebar", min_width=288):
             gr.HTML(SIDEBAR_BRAND_HTML)
-            gr.HTML("<div class='nav-section'>Navigation</div>")
+            gr.HTML(NAV_SECTION_HTML)
             nav_overview = gr.Button("Data Overview",   elem_classes=["nav-btn"], variant="primary")
             nav_timeline = gr.Button("Timeline Viewer", elem_classes=["nav-btn"], variant="secondary")
             nav_label    = gr.Button("Labelling Mode",  elem_classes=["nav-btn"], variant="secondary")
