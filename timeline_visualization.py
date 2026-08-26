@@ -963,6 +963,16 @@ _TIMELINE_IFRAME_INNER = """<!DOCTYPE html>
   }
   #filter-bar .modebar-btn svg { width: 20px !important; height: 20px !important; }
   #filter-bar .modebar-btn     { padding: 4px 6px !important; }
+  /* Plotly's default modebar icon fill is a near-white grey that disappears
+     against this light mint toolbar — force it to the same dark turquoise
+     used everywhere else instead (brighter mint in dark mode, to stay
+     legible against the dark-mode toolbar). */
+  #filter-bar .modebar-btn path { fill: #00504f !important; }
+  #filter-bar .modebar-btn.active path,
+  #filter-bar .modebar-btn:hover path { fill: #00726f !important; }
+  :root[data-theme="dark"] #filter-bar .modebar-btn path { fill: #8fe3d6 !important; }
+  :root[data-theme="dark"] #filter-bar .modebar-btn.active path,
+  :root[data-theme="dark"] #filter-bar .modebar-btn:hover path { fill: #35b8ab !important; }
 </style>
 </head>
 <body>
