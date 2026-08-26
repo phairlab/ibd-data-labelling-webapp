@@ -116,6 +116,18 @@ var _relayoutBound = false;
 var _clampingZoom = false;
 var MAX_VIEW_WIDTH = null;
 var DEFAULT_MIN = null, DEFAULT_MAX = null;
+var _currentFilter = 'all';
+
+// The chart lives inside an iframe (srcdoc, same-origin as the parent app),
+// so it can read the parent's dark/light choice straight off <html data-theme>
+// instead of needing its own separate toggle or a postMessage round trip.
+function themeColors() {
+    var dark = false;
+    try { dark = window.parent.document.documentElement.getAttribute('data-theme') === 'dark'; } catch (e) {}
+    return dark
+        ? { bg: 'rgba(0,0,0,0)', font: '#dbe8e4', grid: 'rgba(219,232,228,.14)', line: 'rgba(219,232,228,.3)' }
+        : { bg: '#ffffff', font: '#152826', grid: '#eef3f1', line: '#d7e1de' };
+}
 
 // Zooming in is unrestricted, but zooming OUT (clicking "-", scrolling out,
 // drag-zoom, Autoscale, Reset axes) can't go past the default view the chart
@@ -241,14 +253,19 @@ function renderChart(filter) {
     DEFAULT_MIN = tMin;
     DEFAULT_MAX = tMax;
 
+    var theme = themeColors();
     var layout = {
-        xaxis: { type: 'date', title: 'Time', range: [tMin, tMax] },
+        xaxis: { type: 'date', title: 'Time', range: [tMin, tMax],
+                 gridcolor: theme.grid, linecolor: theme.line, zerolinecolor: theme.line,
+                 tickfont: { color: theme.font }, titlefont: { color: theme.font } },
         yaxis: {
             title:         'Event Type',
             categoryorder: 'array',
             categoryarray: FIXED,
             tickvals:      FIXED,
-            ticktext:      FIXED.map(function(et) { return LABELS[et] || et; })
+            ticktext:      FIXED.map(function(et) { return LABELS[et] || et; }),
+            gridcolor: theme.grid, linecolor: theme.line, zerolinecolor: theme.line,
+            tickfont: { color: theme.font }, titlefont: { color: theme.font }
         },
         barmode:       'overlay',
         showlegend:    false,
@@ -258,8 +275,9 @@ function renderChart(filter) {
         hovermode:     'closest',
         bargap:        0.1,
         bargroupgap:   0.0,
-        plot_bgcolor:  'white',
-        paper_bgcolor: 'white'
+        font:          { color: theme.font },
+        plot_bgcolor:  theme.bg,
+        paper_bgcolor: theme.bg
     };
 
     var config = {
@@ -303,7 +321,15 @@ window.setF = function(filter) {
     document.querySelectorAll('.fbtn').forEach(function(b) { b.className = 'fbtn off'; });
     var idx = { all: 0, ibd: 1, non_ibd: 2 };
     document.querySelectorAll('.fbtn')[idx[filter]].className = 'fbtn on';
+    _currentFilter = filter;
     renderChart(filter);
+};
+
+// Called by the parent page right after it flips light/dark, so the chart's
+// own colours (which Plotly bakes into the SVG rather than styling via CSS)
+// re-render to match instead of staying stuck in the old theme.
+window.ptvApplyTheme = function() {
+    if (_chartReady) renderChart(_currentFilter);
 };
 
 // Load Plotly from the CDN script already in <head> — NEVER borrow
