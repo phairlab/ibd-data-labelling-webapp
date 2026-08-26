@@ -240,13 +240,16 @@ NEW_UI_CSS = """
 }
 #sidebar-toggle-arrow:hover{background:rgba(255,255,255,.12);}
 #sidebar-toggle-arrow .arrow-expand{display:none;}
-/* ---- collapsed sidebar: narrow rail showing only the brand mark ---- */
-:root[data-sidebar="collapsed"] #sidebar{width:72px !important; min-width:72px !important; padding:14px 10px !important;}
+/* ---- collapsed sidebar: narrow rail showing ONLY the expand arrow — the
+   brand mark is hidden too, since brand+arrow together don't fit a narrow
+   rail without the arrow getting clipped. ---- */
+:root[data-sidebar="collapsed"] #sidebar{width:52px !important; min-width:52px !important; padding:14px 8px !important;}
 :root[data-sidebar="collapsed"] #brand{justify-content:center !important;}
 :root[data-sidebar="collapsed"] #brand .brand-text{display:none !important;}
+:root[data-sidebar="collapsed"] #brand .logo{display:none !important;}
 :root[data-sidebar="collapsed"] #page_overview, :root[data-sidebar="collapsed"] #page_timeline,
 :root[data-sidebar="collapsed"] #page_label, :root[data-sidebar="collapsed"] #page_guide{
-  margin-left:72px !important; width:calc(100% - 72px) !important; max-width:calc(100% - 72px) !important;
+  margin-left:52px !important; width:calc(100% - 52px) !important; max-width:calc(100% - 52px) !important;
 }
 #sidebar .nav-section, #sidebar .ctx-title{font-size:11px; letter-spacing:.09em;
   color:#9dbcb6 !important; font-weight:600; margin:16px 4px 6px; text-transform:uppercase;}
@@ -334,6 +337,11 @@ html, body{overflow-x:hidden !important;}
    dropdown/textbox do, so it needs to stretch to fill its column instead of
    sizing to its own short natural height. */
 .controls-row{display:flex !important; align-items:stretch !important; gap:14px !important; width:100% !important;}
+/* Invisible spacer matching .panel-col's fixed 500px width, so Chart Status
+   (which sits above .chart-col + .panel-col) stops at the same right edge
+   as the chart below it, instead of stretching over the side panel too. */
+.controls-row-spacer{flex:0 0 500px !important; width:500px !important; min-width:500px !important; max-width:500px !important;}
+@media (max-width:820px){ .controls-row-spacer{display:none !important;} }
 .controls-row > .column{display:flex !important; flex-direction:column !important;}
 .load-btn-col{justify-content:flex-end !important;}
 .load-btn-col .block{flex:1 1 auto !important; display:flex !important;}
@@ -521,6 +529,18 @@ SIDEBAR_BRAND_HTML = (
 # renders in the light/turquoise theme regardless of OS colour-scheme.
 FORCE_LIGHT_JS = """
 () => {
+    // Gradio injects its own <link rel="icon"> pointing at its default
+    // favicon (the orange diamond) — that explicit tag wins over the
+    // browser's implicit /favicon.ico lookup, so demo.launch(favicon_path=...)
+    // alone isn't enough. Replace it with our own, pointing at the same
+    // /favicon.ico route (which favicon_path already serves correctly).
+    document.querySelectorAll('link[rel*="icon"]').forEach(el => el.remove());
+    var iconLink = document.createElement('link');
+    iconLink.rel = 'icon';
+    iconLink.type = 'image/svg+xml';
+    iconLink.href = '/favicon.ico?v=1';
+    document.head.appendChild(iconLink);
+
     document.documentElement.classList.remove('dark');
     document.body.classList.remove('dark');
     document.querySelectorAll('.dark').forEach(el => el.classList.remove('dark'));
@@ -869,7 +889,7 @@ def create_interface():
                     "<span class='page-badge'>Patient History</span></div>")
 
             with gr.Row(elem_classes=["controls-row"]):
-                with gr.Column(scale=2, min_width=200):
+                with gr.Column(scale=0, min_width=130, elem_classes=["patient-id-col"]):
                     patient_dropdown = gr.Dropdown(
                         label="Patient ID",
                         choices=app.get_patient_choices(),
@@ -879,9 +899,11 @@ def create_interface():
                 with gr.Column(scale=1, min_width=170, elem_classes=["load-btn-col"]):
                     load_timeline_btn = gr.Button("Load Timeline", icon=icon_path("play-white.svg"),
                                                    variant="primary", elem_classes=["load-btn"])
-                with gr.Column(scale=4, elem_classes=["chart-status-col"]):
+                with gr.Column(scale=5, elem_classes=["chart-status-col"]):
                     chart_status = gr.Textbox(label="Chart Status", value="No chart loaded", interactive=False,
                                                elem_id="chart-status-box", elem_classes=["chart-status-display"])
+                with gr.Column(scale=0, min_width=500, elem_classes=["controls-row-spacer"]):
+                    pass
 
             with gr.Row(elem_classes=["timeline-row"]):
                 with gr.Column(scale=3, min_width=0, elem_classes=["chart-col"]):
@@ -913,7 +935,7 @@ def create_interface():
                     "<span class='page-badge'>Flare Assessment</span></div>")
 
             with gr.Row(elem_classes=["controls-row"]):
-                with gr.Column(scale=2, min_width=200):
+                with gr.Column(scale=0, min_width=130, elem_classes=["patient-id-col"]):
                     patient_dropdown_label = gr.Dropdown(
                         label="Patient ID",
                         choices=app.get_patient_choices(),
@@ -923,14 +945,8 @@ def create_interface():
                 with gr.Column(scale=1, min_width=170, elem_classes=["load-btn-col"]):
                     load_labelling_btn = gr.Button("Load Patient", icon=icon_path("play-white.svg"),
                                                     variant="primary", elem_classes=["load-btn"])
-                with gr.Column(scale=4):
-                    label_chart_status = gr.Textbox(
-                        label="Chart Status",
-                        value="Select and load a patient to begin labelling",
-                        interactive=False,
-                        elem_id="label-chart-status-box",
-                        elem_classes=["chart-status-display"]
-                    )
+                with gr.Column(scale=5):
+                    pass
 
             # Three cards side by side: Labelling Period, Flare Assessment, Saved Labels
             with gr.Row(elem_classes=["label-row"]):
@@ -992,13 +1008,21 @@ def create_interface():
                         visible=True
                     )
 
+            label_chart_status = gr.Textbox(
+                label="Chart Status",
+                value="Select and load a patient to begin labelling",
+                interactive=False,
+                elem_id="label-chart-status-box",
+                elem_classes=["chart-status-display"]
+            )
+
             # Full-width graph below the card row
             with gr.Column(elem_classes=["ui-card"]):
                 with gr.Row(elem_classes="timeline-nav"):
-                    view_back_btn_visible = gr.Button("Previous Month", icon=icon_path("chevron-left-dark.svg"),
+                    view_back_btn_visible = gr.Button("Preview Previous Month", icon=icon_path("chevron-left-dark.svg"),
                                                     size="sm", variant="secondary")
                     gr.HTML("<div style='flex: 1;'></div>")
-                    view_forward_btn_visible = gr.Button("Next Month", icon=icon_path("chevron-right-dark.svg"),
+                    view_forward_btn_visible = gr.Button("Preview Next Month", icon=icon_path("chevron-right-dark.svg"),
                                                        size="sm", variant="secondary")
 
                 gr.HTML("<div id='monthly-plot-toolbar'>"
@@ -1187,8 +1211,8 @@ uv run python main.py admin
         # ====================================================================
 
         current_view_info = gr.Textbox(label="Current View", value="", interactive=False, visible=False)
-        view_back_btn = gr.Button("Previous Month", icon=icon_path("chevron-left-dark.svg"), variant="secondary", visible=False)
-        view_forward_btn = gr.Button("Next Month", icon=icon_path("chevron-right-dark.svg"), variant="secondary", visible=False)
+        view_back_btn = gr.Button("Preview Previous Month", icon=icon_path("chevron-left-dark.svg"), variant="secondary", visible=False)
+        view_forward_btn = gr.Button("Preview Next Month", icon=icon_path("chevron-right-dark.svg"), variant="secondary", visible=False)
 
         def _labels_radio_choices():
             months = app.get_monthly_labels_list()
