@@ -356,7 +356,10 @@ html, body{overflow-x:hidden !important;}
 .label-row > .ui-card{display:flex !important; flex-direction:column !important; padding:16px !important;}
 .lbl-period{flex:2 1 220px !important; min-width:200px !important;}
 .lbl-flare{flex:3 1 280px !important; min-width:260px !important;}
-.lbl-saved{flex:3 1 260px !important; min-width:240px !important; max-height:420px !important; overflow-y:auto !important;}
+.lbl-saved{flex:3 1 260px !important; min-width:240px !important;}
+/* Let the card itself stretch to match its siblings' height (align-items:stretch
+   on .label-row); only the label list inside scrolls if it grows too tall. */
+.lbl-saved .saved-labels-list{overflow-y:auto !important; max-height:320px !important;}
 
 /* User Guide: style the rendered markdown to match the app's theme.
    Flow the sections into columns instead of one long narrow strip so the
