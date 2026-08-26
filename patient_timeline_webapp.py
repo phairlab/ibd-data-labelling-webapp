@@ -626,13 +626,12 @@ class PatientTimelineApp:
         """
         Get chart information as a structured HTML card for display in the UI.
 
-        Shows total events, date range, and a monthly-flare count as labelled
-        fields, matching the styling of the other info cards (patient panel /
-        event counts / flare periods). The actual flare-by-flare breakdown
-        (date-based and monthly) lives in the Flare Periods card instead —
-        repeating that full list here was redundant, so this card just gives
-        the count. The event-type breakdown is left out too, since it's
-        already shown in the adjacent Event Counts card in the same grid.
+        Shows total events, date range, a monthly-flare count, and a per-
+        event-type breakdown, as labelled fields matching the styling of the
+        other info cards (patient panel / event counts / flare periods). The
+        flare-by-flare breakdown (date-based and monthly) lives in the Flare
+        Periods card instead — repeating that full list here was redundant,
+        so this card just gives the count.
 
         Returns:
             str: HTML for the Chart Information card.
@@ -656,10 +655,17 @@ class PatientTimelineApp:
         monthly_labels = self.load_monthly_labels()
         monthly_flare_count = sum(1 for v in monthly_labels.values() if v.get('evidence') == 'Yes')
 
+        breakdown = self.get_event_breakdown(self.current_patient_data)
+        breakdown_rows = "".join(
+            f"<div class='info-row'><span>{escape(name)}</span><span class='count'>{count}</span></div>"
+            for name, count in breakdown
+        )
+
         body = (
             f"<div class='info-row'><span>Total events</span><span>{total_events:,}</span></div>"
             f"<div class='info-row'><span>Date range</span><span>{escape(date_range)}</span></div>"
             f"<div class='info-row'><span>Monthly flares</span><span class='count'>{monthly_flare_count}</span></div>"
+            f"{breakdown_rows}"
         )
 
         return (f"<div class='ui-card'><div class='card-title'>"
