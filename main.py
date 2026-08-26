@@ -467,9 +467,14 @@ html, body{overflow-x:hidden !important;}
 .controls-row-spacer{flex:0 0 500px !important; width:500px !important; min-width:500px !important; max-width:500px !important;}
 @media (max-width:820px){ .controls-row-spacer{display:none !important;} }
 .controls-row > .column{display:flex !important; flex-direction:column !important;}
-.load-btn-col{justify-content:flex-end !important;}
-.load-btn-col .block{flex:1 1 auto !important; display:flex !important;}
-.load-btn{flex:1 1 auto !important; height:100% !important;}
+/* The sibling columns (Patient ID / Chart Status) each have a label sitting
+   above their visible box, which is what actually pushes those boxes down
+   to their vertical mid-point — the button has no label eating that space,
+   so matching column height alone doesn't land it in the same place. Pin
+   it with an explicit offset from the column top instead, sized to match
+   the sibling boxes exactly (~40px tall, landing at the same top/bottom). */
+.load-btn-col{justify-content:flex-start !important;}
+.load-btn{flex:0 0 auto !important; height:40px !important; margin-top:31px !important;}
 .btn-light-teal{background:var(--ptv-accent-soft) !important; color:var(--ptv-accent-deep) !important; border:1px solid var(--ptv-accent-soft-border) !important;}
 .btn-light-teal:hover{background:var(--ptv-accent-soft-strong) !important;}
 
