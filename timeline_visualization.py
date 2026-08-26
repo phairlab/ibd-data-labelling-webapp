@@ -760,6 +760,11 @@ def create_monthly_timeline(app, selected_month, view_offset=0):
                            for event_type in fixed_order]
         
         # === Update Layout for Monthly View ===
+        # This figure is rendered server-side once per navigation click, with
+        # no live signal for the browser's current light/dark choice — rather
+        # than guessing, use a transparent background (so the surrounding
+        # .ui-card shows through, matching either theme) and mid-tone grid/
+        # font colours that stay legible on both a white and a dark card.
         fig.update_layout(
             xaxis_title="Time",
             yaxis_title="Event",
@@ -769,7 +774,11 @@ def create_monthly_timeline(app, selected_month, view_offset=0):
                 range=[
                     start_date - pd.Timedelta(days=2),
                     end_date + pd.Timedelta(days=2)
-                ]
+                ],
+                gridcolor="rgba(124,140,136,.25)",
+                linecolor="rgba(124,140,136,.4)",
+                tickfont=dict(color="#ffffff"),
+                title=dict(font=dict(color="#ffffff")),
             ),
             bargap=0.1,
             bargroupgap=0.0,
@@ -777,11 +786,18 @@ def create_monthly_timeline(app, selected_month, view_offset=0):
             margin=dict(l=50, r=50, t=50, b=50),
             height=600,  # Smaller height for focused monthly view
             hovermode='closest',
+            plot_bgcolor="rgba(0,0,0,0)",
+            paper_bgcolor="rgba(0,0,0,0)",
+            font=dict(color="#ffffff"),
             yaxis=dict(
                 ticktext=all_custom_labels,
-                tickvals=fixed_order, 
+                tickvals=fixed_order,
                 categoryorder='array',
-                categoryarray=fixed_order 
+                categoryarray=fixed_order,
+                gridcolor="rgba(124,140,136,.25)",
+                linecolor="rgba(124,140,136,.4)",
+                tickfont=dict(color="#ffffff"),
+                title=dict(font=dict(color="#ffffff")),
             )
         )
         
@@ -909,12 +925,14 @@ _TIMELINE_IFRAME_INNER = """<!DOCTYPE html>
   * { margin:0; padding:0; box-sizing:border-box; }
   html, body { height:100%; }
   body { font-family:Inter,Arial,sans-serif; background:white; display:flex; flex-direction:column; }
+  :root[data-theme="dark"] body { background:#162b27; }
   #plot { flex:1 1 auto; min-height:0; }
   #filter-bar { display:flex; gap:8px; padding:10px 8px 8px; align-items:center; flex-wrap:wrap; }
   .fbtn { padding:6px 16px; border-radius:6px; border:none; font-size:13px; white-space:nowrap;
           font-weight:500; cursor:pointer; transition:background 0.2s,color 0.2s; }
   .fbtn.on  { background:#00726f; color:white; }
   .fbtn.off { background:#ffffff; color:#000000; border:1px solid #d5ddd9; }
+  :root[data-theme="dark"] .fbtn.off { background:#1e3a35; color:#dbe8e4; border-color:#2f5651; }
 
   /* Unified toolbar bar — light teal plate, single row, matches app palette */
   #filter-bar {
@@ -925,6 +943,8 @@ _TIMELINE_IFRAME_INNER = """<!DOCTYPE html>
     border: 1px solid #b9dcd6;
     flex-wrap: nowrap !important;
   }
+  :root[data-theme="dark"] #filter-bar { background:#1d3a35; border-color:#2f5651; }
+  :root[data-theme="dark"] #filter-bar span { color:#dbe8e4 !important; }
 
   /* Modebar when moved into filter bar — horizontal, pushed to the right */
   #filter-bar .modebar-container {
@@ -957,6 +977,22 @@ _TIMELINE_IFRAME_INNER = """<!DOCTYPE html>
 // Patient data injected by Python — consumed by timeline.js
 var ALL_EVENTS = __EVENTS_JSON__;
 var FLARES     = __FLARES_JSON__;
+
+// This iframe is same-origin (srcdoc) with the parent app, so it can read
+// the parent's light/dark choice directly off <html data-theme> and mirror
+// it here — that's what drives the CSS rules above (filter bar / buttons)
+// and what timeline.js's themeColors() reads for the Plotly figure itself.
+(function() {
+    function syncTheme() {
+        try {
+            var t = window.parent.document.documentElement.getAttribute('data-theme');
+            if (t) document.documentElement.setAttribute('data-theme', t);
+            else document.documentElement.removeAttribute('data-theme');
+        } catch (e) {}
+    }
+    syncTheme();
+    window.ptvSyncTheme = syncTheme;
+})();
 </script>
 <script>
 __TIMELINE_JS__
