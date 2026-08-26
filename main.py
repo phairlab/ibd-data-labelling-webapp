@@ -591,6 +591,7 @@ html, body{overflow-x:hidden !important;}
   box-shadow:none !important; padding-left:14px !important; resize:none !important;
 }
 .chart-status-col{justify-content:center !important;}
+.patient-id-col input{color:var(--ptv-accent-deep) !important; font-weight:500 !important;}
 
 /* ---- Export format / Saved Labels / Flare Assessment radio style: bordered
    pill cards, classic radio dot — outer ring stays neutral/uncoloured, only
@@ -638,6 +639,18 @@ html, body{overflow-x:hidden !important;}
 }
 #monthly-plot-toolbar .modebar-btn svg{ width:20px !important; height:20px !important; }
 #monthly-plot-toolbar .modebar-btn{ padding:4px 6px !important; }
+/* Plotly's default modebar icon fill is a near-white grey that disappears
+   against this light mint toolbar — force it to the same dark turquoise
+   used everywhere else instead. */
+#monthly-plot-toolbar .modebar-btn path{ fill:var(--ptv-accent-deep) !important; }
+#monthly-plot-toolbar .modebar-btn.active path,
+#monthly-plot-toolbar .modebar-btn:hover path{ fill:var(--ptv-accent) !important; }
+/* The "Produced with Plotly" logo button renders as a plain black square
+   here (its icon isn't a <path> our fill override can reach) — it's just
+   branding, not a real action, so hide it rather than leave a stray
+   black tile in the toolbar. */
+#monthly-plot-toolbar .modebar-btn--logo{ display:none !important; }
+#monthly-plot-toolbar .modebar-group:has(.modebar-btn--logo){ display:none !important; }
 
 /* ---- dark theme: static button icons (static/icons/*.svg) are pre-coloured
    PNG-like image files, not inline currentColor SVG, so CSS can't recolour
