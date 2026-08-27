@@ -124,8 +124,11 @@ var _currentFilter = 'all';
 function themeColors() {
     var dark = false;
     try { dark = window.parent.document.documentElement.getAttribute('data-theme') === 'dark'; } catch (e) {}
+    // Dark bg is an actual opaque colour (not transparent) — sitting close
+    // to the page's own colour (barely lighter) so the plot area reads as
+    // its own distinct surface instead of camouflaging with the card.
     return dark
-        ? { bg: 'rgba(0,0,0,0)', font: '#dbe8e4', grid: 'rgba(219,232,228,.14)', line: 'rgba(219,232,228,.3)' }
+        ? { bg: '#0c1917', font: '#e9f4f1', grid: 'rgba(233,244,241,.14)', line: 'rgba(233,244,241,.3)' }
         : { bg: '#ffffff', font: '#152826', grid: '#eef3f1', line: '#d7e1de' };
 }
 
