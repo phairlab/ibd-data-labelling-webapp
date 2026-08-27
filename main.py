@@ -225,47 +225,55 @@ NEW_UI_CSS = """
   --ptv-focus-shadow:rgba(0,104,103,.12);
 }
 :root[data-theme="dark"]{
-  --ptv-bg:#0f1f1d;
-  --ptv-bg-elevated:#22443f;
-  --ptv-border:#3f645d;
-  --ptv-border-soft:#35544e;
-  --ptv-text:#e4efec;
-  --ptv-text-heading:#f5faf8;
-  --ptv-text-secondary:#a9c2bc;
-  --ptv-text-body:#c3d8d3;
-  --ptv-text-muted:#87a09a;
-  --ptv-accent:#35b8ab;
-  --ptv-accent-hover:#4fd0c2;
-  --ptv-accent-solid:#14766e;
-  --ptv-accent-solid-hover:#1c8b81;
-  --ptv-accent-deep:#8fe3d6;
-  --ptv-accent-deep-alt:#5fd2c3;
-  /* Lighter/more saturated than --ptv-bg-elevated on purpose — these boxes
-     (Chart Status, Last Loaded, block-label chips like "Format") need to
-     read as a raised highlighted plate against the card, not blend into
-     it or the page behind it. */
-  --ptv-accent-soft:#2c554c;
-  --ptv-accent-soft-strong:#35655a;
-  --ptv-accent-soft-border:#437368;
-  --ptv-accent-checked-bg:#2f5f54;
-  --ptv-accent-teal-gray:#8fbdb4;
+  /* Every layer used to live in one narrow band of the same teal hue at
+     slightly different lightness — technically distinct but visually flat,
+     since nothing had room to actually pop. This palette widens the
+     lightness/saturation gap between layers (page → card → well) and pulls
+     the accent into a richer, more saturated teal-cyan so it reads as a
+     deliberate highlight against calm, near-neutral surfaces — instead of
+     "everything is a slightly different green." Still the same turquoise
+     family throughout, just with real contrast between the steps. */
+  --ptv-bg:#0a1513;
+  --ptv-bg-elevated:#17302c;
+  --ptv-border:#33544d;
+  --ptv-border-soft:#213a35;
+  --ptv-text:#e9f4f1;
+  --ptv-text-heading:#ffffff;
+  --ptv-text-secondary:#9cb6b0;
+  --ptv-text-body:#c4dcd6;
+  --ptv-text-muted:#7c9791;
+  --ptv-accent:#3ecdbd;
+  --ptv-accent-hover:#5be0d0;
+  --ptv-accent-solid:#128a7e;
+  --ptv-accent-solid-hover:#17a294;
+  --ptv-accent-deep:#94ecdb;
+  --ptv-accent-deep-alt:#5fe0cd;
+  /* Richer and more saturated than --ptv-bg-elevated on purpose — these
+     boxes (Chart Status, Last Loaded, block-label chips like "Format")
+     need to read as a raised highlighted plate against the card, not
+     blend into it or the page behind it. */
+  --ptv-accent-soft:#1c4b43;
+  --ptv-accent-soft-strong:#206059;
+  --ptv-accent-soft-border:#2f7d71;
+  --ptv-accent-checked-bg:#1d564c;
+  --ptv-accent-teal-gray:#8ec3ba;
   /* Recessed well tone — darker than --ptv-bg-elevated so nested answer
      pills (category checkboxes, saved-label rows) sit visibly BELOW their
      card instead of matching its colour exactly. */
-  --ptv-well-bg:#132a25;
+  --ptv-well-bg:#0e211e;
   --ptv-btn-secondary-bg:var(--ptv-bg);
   --ptv-btn-secondary-bg-hover:var(--ptv-accent-soft);
-  --ptv-input-border:#345450;
-  --ptv-input-border-strong:#4a6c67;
-  --ptv-danger-bg:#3a2224;
-  --ptv-danger-border:#e0697a;
-  --ptv-stat-grad-start:#274d47;
-  --ptv-stat-grad-end:#1e3d38;
-  --ptv-code-bg:#0a1715;
-  --ptv-code-text:#bcded8;
-  --ptv-shadow-1:rgba(0,0,0,.45);
-  --ptv-shadow-2:rgba(0,0,0,.3);
-  --ptv-focus-shadow:rgba(53,184,171,.22);
+  --ptv-input-border:#2c4a45;
+  --ptv-input-border-strong:#3f6961;
+  --ptv-danger-bg:#33191c;
+  --ptv-danger-border:#ec7a89;
+  --ptv-stat-grad-start:#1d3d38;
+  --ptv-stat-grad-end:#122a25;
+  --ptv-code-bg:#071110;
+  --ptv-code-text:#b3d9d1;
+  --ptv-shadow-1:rgba(0,0,0,.55);
+  --ptv-shadow-2:rgba(0,0,0,.35);
+  --ptv-focus-shadow:rgba(62,205,189,.25);
 }
 
 :root, gradio-app, .gradio-container, .dark, .dark .gradio-container{
