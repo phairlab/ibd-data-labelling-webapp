@@ -207,6 +207,15 @@ NEW_UI_CSS = """
      in dark mode so nested pills don't disappear into the card behind
      them (see --ptv-well-bg dark override). */
   --ptv-well-bg:#ffffff;
+  /* the card surface itself (ui-card) — identical to --ptv-bg-elevated in
+     light mode; see the dark override for why dark mode pulls this down
+     close to the page colour instead. */
+  --ptv-card-bg:var(--ptv-bg-elevated);
+  /* passive info readouts nested in a card (Last Loaded, Chart Status, the
+     monthly-plot toolbar) — a light mint highlight reads fine here against
+     a white card in light mode, but see the dark override for why this
+     flips to a plain recessed tone instead. */
+  --ptv-inset-bg:var(--ptv-accent-soft);
   /* secondary buttons (Previous/Next Month, Preview Previous/Next Month,
      Clear Label) — a plain-white button already contrasts fine against
      both the card and page in light mode. */
@@ -248,10 +257,10 @@ NEW_UI_CSS = """
   --ptv-accent-solid-hover:#17a294;
   --ptv-accent-deep:#94ecdb;
   --ptv-accent-deep-alt:#5fe0cd;
-  /* Richer and more saturated than --ptv-bg-elevated on purpose — these
-     boxes (Chart Status, Last Loaded, block-label chips like "Format")
-     need to read as a raised highlighted plate against the card, not
-     blend into it or the page behind it. */
+  /* Richer and more saturated than --ptv-bg-elevated on purpose — used for
+     block-label chips like "Format"/"Patient ID" and the checked/selected
+     state of pills, which need to read as a raised highlighted plate
+     against the card. */
   --ptv-accent-soft:#1c4b43;
   --ptv-accent-soft-strong:#206059;
   --ptv-accent-soft-border:#2f7d71;
@@ -261,6 +270,13 @@ NEW_UI_CSS = """
      pills (category checkboxes, saved-label rows) sit visibly BELOW their
      card instead of matching its colour exactly. */
   --ptv-well-bg:#0e211e;
+  /* Back to the original lighter card tone (same as --ptv-bg-elevated) —
+     the near-page-black version made the card edge nearly invisible. */
+  --ptv-card-bg:var(--ptv-bg-elevated);
+  /* Passive info readouts (Last Loaded, Chart Status, the monthly-plot
+     toolbar) nested inside the card — a step darker so they still read
+     as sitting below the card, without fusing into it. */
+  --ptv-inset-bg:#071110;
   --ptv-btn-secondary-bg:var(--ptv-bg);
   --ptv-btn-secondary-bg-hover:var(--ptv-accent-soft);
   --ptv-input-border:#2c4a45;
@@ -533,7 +549,7 @@ html, body{overflow-x:hidden !important;}
 }
 
 /* ---- cards ---- */
-.ui-card{background:var(--ptv-bg-elevated) !important; border:1px solid var(--ptv-border) !important;
+.ui-card{background:var(--ptv-card-bg) !important; border:1px solid var(--ptv-border) !important;
   border-radius:14px !important; padding:20px !important;
   box-shadow:0 1px 3px var(--ptv-shadow-1), 0 1px 2px var(--ptv-shadow-2) !important;}
 .card-title{font-weight:700; color:var(--ptv-text-heading) !important; margin-bottom:14px; font-size:16px;
@@ -594,7 +610,7 @@ html, body{overflow-x:hidden !important;}
   flex:0 0 auto !important; box-sizing:border-box !important;
 }
 .chart-status-display textarea, .chart-status-display input{
-  background:var(--ptv-bg-elevated) !important; border:none !important; border-left:3px solid var(--ptv-accent) !important;
+  background:var(--ptv-well-bg) !important; border:none !important; border-left:3px solid var(--ptv-accent) !important;
   border-radius:6px !important; color:var(--ptv-accent-deep) !important; font-weight:500 !important;
   box-shadow:none !important; padding-left:14px !important; resize:none !important;
 }
@@ -624,13 +640,13 @@ html, body{overflow-x:hidden !important;}
 /* ---- "last loaded" box on the Load Data page ---- */
 .last-loaded-box{
   color:var(--ptv-text-muted) !important; font-size:14px; font-weight:400;
-  background:var(--ptv-accent-soft); border-radius:8px; padding:8px 10px; margin-bottom:10px;
+  background:var(--ptv-inset-bg); border-radius:8px; padding:8px 10px; margin-bottom:10px;
 }
 
 /* ---- Labelling Mode monthly plot toolbar: dedicated bar for the relocated
    Plotly modebar, sitting below the Previous/Next Month buttons. ---- */
 #monthly-plot-toolbar{
-  background:var(--ptv-accent-soft); border-radius:8px; padding:8px 16px 8px 12px; margin:0 0 10px;
+  background:var(--ptv-inset-bg); border-radius:8px; padding:8px 16px 8px 12px; margin:0 0 10px;
   border:1px solid var(--ptv-accent-soft-border); display:flex; align-items:center; justify-content:flex-start;
   flex-wrap:nowrap !important; min-height:20px;
 }
@@ -1071,7 +1087,8 @@ def create_interface():
                 # --- Card 1: Dataset info ---
                 with gr.Column(elem_classes=["ui-card"]):
                     dataset_info_card = gr.HTML(dataset_info_html())
-                    data_status = gr.Textbox(label="Status", value=app.get_data_status(), interactive=False, visible=False)
+                    data_status = gr.Textbox(label="Status", value=app.get_data_status(), interactive=False, visible=False,
+                                              elem_classes=["chart-status-display"])
                     reload_data_btn = gr.Button("Reload Data", icon=icon_path("refresh-white.svg"),
                                                  variant="primary", elem_classes=["card-cta"])
 
@@ -1082,9 +1099,11 @@ def create_interface():
                             "with paths to your data files on this server.</div>")
                     upload_config = gr.UploadButton("Upload study_config.yaml", icon=icon_path("upload-teal.svg"),
                                                      file_types=[".yaml", ".yml"], elem_classes=["btn-light-teal"])
-                    config_name   = gr.Textbox(value="no file", show_label=False, interactive=False, max_lines=1, lines=1)
+                    config_name   = gr.Textbox(value="no file", show_label=False, interactive=False, max_lines=1, lines=1,
+                                                elem_classes=["chart-status-display"])
                     load_config_btn = gr.Button("Load Config & Data", variant="primary", elem_classes=["card-cta"])
-                    config_status   = gr.Textbox(label="Status", value="", interactive=False, lines=1)
+                    config_status   = gr.Textbox(label="Status", value="", interactive=False, lines=1,
+                                                  elem_classes=["chart-status-display"])
 
                 # --- Card 3: Export data (with event breakdown table) ---
                 with gr.Column(elem_classes=["ui-card"]):
@@ -1096,7 +1115,8 @@ def create_interface():
                                               elem_classes=["saved-labels-list"])
                     export_btn = gr.Button("Export Data", icon=icon_path("download-white.svg"),
                                             variant="primary", elem_classes=["card-cta"])
-                    export_status = gr.Textbox(label="Export Status", value="", interactive=False)
+                    export_status = gr.Textbox(label="Export Status", value="", interactive=False,
+                                                elem_classes=["chart-status-display"])
 
         # ====================================================================
         # PAGE: TIMELINE VIEWER
