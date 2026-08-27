@@ -329,13 +329,19 @@ function renderChart(filter) {
                  gridcolor: theme.grid, linecolor: theme.line, zerolinecolor: theme.line,
                  tickfont: { color: theme.font }, titlefont: { color: theme.font } },
         yaxis: {
-            title:    'Event Type',
-            range:    [CURRENT_Y_MIN, CURRENT_Y_MAX],
-            tickmode: 'array',
-            tickvals: FIXED.map(function(et) { return YPOS[et]; }),
-            ticktext: FIXED.map(function(et) { return LABELS[et] || et; }),
+            // standoff + automargin push the title clear of the tick labels
+            // instead of the two crowding together — without automargin, a
+            // fixed left margin (see config.margin.l below) isn't wide
+            // enough for the longer labels ("Physician Claim") to leave the
+            // title any breathing room, so it ends up wedged between words.
+            title:      { text: 'Event Type', standoff: 24, font: { color: theme.font } },
+            automargin: true,
+            range:      [CURRENT_Y_MIN, CURRENT_Y_MAX],
+            tickmode:   'array',
+            tickvals:   FIXED.map(function(et) { return YPOS[et]; }),
+            ticktext:   FIXED.map(function(et) { return LABELS[et] || et; }),
             gridcolor: theme.grid, linecolor: theme.line, zerolinecolor: theme.line,
-            tickfont: { color: theme.font }, titlefont: { color: theme.font }
+            tickfont: { color: theme.font }
         },
         barmode:       'overlay',
         showlegend:    false,
