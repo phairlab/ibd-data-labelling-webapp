@@ -925,14 +925,14 @@ _TIMELINE_IFRAME_INNER = """<!DOCTYPE html>
   * { margin:0; padding:0; box-sizing:border-box; }
   html, body { height:100%; }
   body { font-family:Inter,Arial,sans-serif; background:white; display:flex; flex-direction:column; overflow-x:hidden; }
-  :root[data-theme="dark"] body { background:#162b27; }
+  :root[data-theme="dark"] body { background:#0e211e; }
   #plot { flex:1 1 auto; min-height:0; }
   #filter-bar { display:flex; gap:8px; padding:10px 8px 8px; align-items:center; flex-wrap:wrap; }
   .fbtn { padding:6px 16px; border-radius:6px; border:none; font-size:13px; white-space:nowrap;
           font-weight:500; cursor:pointer; transition:background 0.2s,color 0.2s; }
   .fbtn.on  { background:#00726f; color:white; }
   .fbtn.off { background:#ffffff; color:#000000; border:1px solid #d5ddd9; }
-  :root[data-theme="dark"] .fbtn.off { background:#1e3a35; color:#dbe8e4; border-color:#2f5651; }
+  :root[data-theme="dark"] .fbtn.off { background:#1c4b43; color:#e9f4f1; border-color:#2f7d71; }
 
   /* Unified toolbar bar — light teal plate, single row, matches app palette */
   #filter-bar {
@@ -943,8 +943,8 @@ _TIMELINE_IFRAME_INNER = """<!DOCTYPE html>
     border: 1px solid #b9dcd6;
     flex-wrap: nowrap !important;
   }
-  :root[data-theme="dark"] #filter-bar { background:#1d3a35; border-color:#2f5651; }
-  :root[data-theme="dark"] #filter-bar span { color:#dbe8e4 !important; }
+  :root[data-theme="dark"] #filter-bar { background:#1c4b43; border-color:#2f7d71; }
+  :root[data-theme="dark"] #filter-bar span { color:#e9f4f1 !important; }
 
   /* Modebar when moved into filter bar — horizontal, pushed to the right */
   #filter-bar .modebar-container {
@@ -970,9 +970,9 @@ _TIMELINE_IFRAME_INNER = """<!DOCTYPE html>
   #filter-bar .modebar-btn path { fill: #00504f !important; }
   #filter-bar .modebar-btn.active path,
   #filter-bar .modebar-btn:hover path { fill: #00726f !important; }
-  :root[data-theme="dark"] #filter-bar .modebar-btn path { fill: #8fe3d6 !important; }
+  :root[data-theme="dark"] #filter-bar .modebar-btn path { fill: #94ecdb !important; }
   :root[data-theme="dark"] #filter-bar .modebar-btn.active path,
-  :root[data-theme="dark"] #filter-bar .modebar-btn:hover path { fill: #35b8ab !important; }
+  :root[data-theme="dark"] #filter-bar .modebar-btn:hover path { fill: #3ecdbd !important; }
 </style>
 </head>
 <body>
