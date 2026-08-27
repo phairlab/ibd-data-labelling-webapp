@@ -924,7 +924,7 @@ _TIMELINE_IFRAME_INNER = """<!DOCTYPE html>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
   html, body { height:100%; }
-  body { font-family:Inter,Arial,sans-serif; background:white; display:flex; flex-direction:column; }
+  body { font-family:Inter,Arial,sans-serif; background:white; display:flex; flex-direction:column; overflow-x:hidden; }
   :root[data-theme="dark"] body { background:#162b27; }
   #plot { flex:1 1 auto; min-height:0; }
   #filter-bar { display:flex; gap:8px; padding:10px 8px 8px; align-items:center; flex-wrap:wrap; }

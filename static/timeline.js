@@ -133,12 +133,16 @@ function themeColors() {
 // drag-zoom, Autoscale, Reset axes) can't go past the default view the chart
 // first loaded with — past that the bars are too compressed to read, so
 // snap back to the default instead of letting the view keep widening.
+//
+// The same clamp-and-track pattern is applied to the Y axis (event-type
+// rows) further down, for the row-zoom +/- buttons.
 function clampMaxZoom(eventData) {
     if (_clampingZoom || !eventData) return;
 
-    if (MAX_VIEW_WIDTH === null) return;
+    var patch = {};
+    var needsRelayout = false;
 
-    if (eventData['xaxis.autorange'] === true) {
+    if (eventData['xaxis.autorange'] === true && MAX_VIEW_WIDTH !== null) {
         // Autoscale/Reset axes resets via Plotly's own fit-to-ALL-data
         // autorange, which includes any stray outlier dates (e.g. a 1970
         // record) — centering a normal-width window on THAT range's
@@ -147,75 +151,126 @@ function clampMaxZoom(eventData) {
         // view (tMin/tMax below) was already computed to exclude such
         // outliers via percentiles, so just snap straight back to it —
         // that's the one range guaranteed to actually show the data.
-        _clampingZoom = true;
-        Plotly.relayout('plot', {
-            'xaxis.range[0]': DEFAULT_MIN,
-            'xaxis.range[1]': DEFAULT_MAX
-        }).then(function() { _clampingZoom = false; });
-        return;
-    }
-
-    var hasMin = Object.prototype.hasOwnProperty.call(eventData, 'xaxis.range[0]');
-    var hasMax = Object.prototype.hasOwnProperty.call(eventData, 'xaxis.range[1]');
-    if (!hasMin || !hasMax) return;
-    var r0 = new Date(eventData['xaxis.range[0]']).getTime();
-    var r1 = new Date(eventData['xaxis.range[1]']).getTime();
-
-    var width = r1 - r0;
-    if (width > MAX_VIEW_WIDTH) {
-        var center = (r0 + r1) / 2;
-        _clampingZoom = true;
-        Plotly.relayout('plot', {
-            'xaxis.range[0]': center - MAX_VIEW_WIDTH / 2,
-            'xaxis.range[1]': center + MAX_VIEW_WIDTH / 2
-        }).then(function() { _clampingZoom = false; });
-    }
-}
-
-// Row spacing between the 6 fixed category rows — "+"/"-" on the modebar
-// adjust how much of each row's slot the bar fills (BASE = tight/default,
-// MIN = most spread out). Never exceeds BASE in either direction, so there's
-// no unfilled/blank space: the bar always occupies some fraction of its own
-// fixed-height row slot, nothing more.
-var ROW_SPACING_LEVEL = 0;
-var ROW_SPACING_MAX_LEVEL = 5;
-var ROW_SPACING_BASE_WIDTH = 0.9;
-var ROW_SPACING_MIN_WIDTH = 0.3;
-
-function currentRowBarWidth() {
-    var step = (ROW_SPACING_BASE_WIDTH - ROW_SPACING_MIN_WIDTH) / ROW_SPACING_MAX_LEVEL;
-    return ROW_SPACING_BASE_WIDTH - ROW_SPACING_LEVEL * step;
-}
-
-function adjustRowSpacing(direction) {
-    if (direction > 0) {
-        ROW_SPACING_LEVEL = Math.min(ROW_SPACING_MAX_LEVEL, ROW_SPACING_LEVEL + 1);
+        patch['xaxis.range[0]'] = DEFAULT_MIN;
+        patch['xaxis.range[1]'] = DEFAULT_MAX;
+        CURRENT_X_MIN = DEFAULT_MIN; CURRENT_X_MAX = DEFAULT_MAX;
+        needsRelayout = true;
     } else {
-        ROW_SPACING_LEVEL = Math.max(0, ROW_SPACING_LEVEL - 1);
+        var hasXMin = Object.prototype.hasOwnProperty.call(eventData, 'xaxis.range[0]');
+        var hasXMax = Object.prototype.hasOwnProperty.call(eventData, 'xaxis.range[1]');
+        if (hasXMin && hasXMax && MAX_VIEW_WIDTH !== null) {
+            var xr0 = new Date(eventData['xaxis.range[0]']).getTime();
+            var xr1 = new Date(eventData['xaxis.range[1]']).getTime();
+            var xWidth = xr1 - xr0;
+            if (xWidth > MAX_VIEW_WIDTH) {
+                var xCenter = (xr0 + xr1) / 2;
+                patch['xaxis.range[0]'] = xCenter - MAX_VIEW_WIDTH / 2;
+                patch['xaxis.range[1]'] = xCenter + MAX_VIEW_WIDTH / 2;
+                CURRENT_X_MIN = patch['xaxis.range[0]']; CURRENT_X_MAX = patch['xaxis.range[1]'];
+                needsRelayout = true;
+            } else {
+                CURRENT_X_MIN = xr0; CURRENT_X_MAX = xr1;
+            }
+        }
     }
-    Plotly.restyle('plot', { width: currentRowBarWidth() });
+
+    if (eventData['yaxis.autorange'] === true) {
+        patch['yaxis.range[0]'] = DEFAULT_Y_MIN;
+        patch['yaxis.range[1]'] = DEFAULT_Y_MAX;
+        CURRENT_Y_MIN = DEFAULT_Y_MIN; CURRENT_Y_MAX = DEFAULT_Y_MAX;
+        needsRelayout = true;
+    } else {
+        var hasYMin = Object.prototype.hasOwnProperty.call(eventData, 'yaxis.range[0]');
+        var hasYMax = Object.prototype.hasOwnProperty.call(eventData, 'yaxis.range[1]');
+        if (hasYMin && hasYMax) {
+            var yr0 = eventData['yaxis.range[0]'];
+            var yr1 = eventData['yaxis.range[1]'];
+            var yWidth = yr1 - yr0;
+            var maxYWidth = DEFAULT_Y_MAX - DEFAULT_Y_MIN;
+            if (yWidth > maxYWidth) {
+                var yCenter = (yr0 + yr1) / 2;
+                patch['yaxis.range[0]'] = yCenter - maxYWidth / 2;
+                patch['yaxis.range[1]'] = yCenter + maxYWidth / 2;
+                CURRENT_Y_MIN = patch['yaxis.range[0]']; CURRENT_Y_MAX = patch['yaxis.range[1]'];
+                needsRelayout = true;
+            } else {
+                CURRENT_Y_MIN = yr0; CURRENT_Y_MAX = yr1;
+            }
+        }
+    }
+
+    if (needsRelayout) {
+        _clampingZoom = true;
+        Plotly.relayout('plot', patch).then(function() { _clampingZoom = false; });
+    }
 }
+
+// Row (Y-axis) zoom — the six event-type rows sit on a plain numeric axis
+// (see YPOS in renderChart) instead of Plotly's categorical axis, purely so
+// "+"/"-" can zoom that axis's RANGE the same way native scroll/drag-zoom
+// already works on the X (time) axis: shrinking/growing the visible range
+// centered on wherever it currently sits, rather than changing each bar's
+// own thickness inside a fixed-height row slot (the old approach, which
+// left the container's total height unchanged and just made bars skinnier
+// — visible as growing blank gaps around each row instead of an actual
+// zoom). DEFAULT_Y_MIN/MAX is exactly the six rows with half-a-row margin
+// top and bottom, so "zoomed all the way out" has no leftover blank space,
+// and it's also the ceiling clampMaxZoom enforces above.
+var DEFAULT_Y_MIN = null, DEFAULT_Y_MAX = null;
+var CURRENT_Y_MIN = null, CURRENT_Y_MAX = null;
+var CURRENT_X_MIN = null, CURRENT_X_MAX = null;
+var MIN_Y_RANGE_WIDTH = 1.2;
+
+function adjustYZoom(factor) {
+    if (CURRENT_Y_MIN === null || CURRENT_Y_MAX === null) return;
+    var center = (CURRENT_Y_MIN + CURRENT_Y_MAX) / 2;
+    var maxWidth = DEFAULT_Y_MAX - DEFAULT_Y_MIN;
+    var width = Math.max(MIN_Y_RANGE_WIDTH, Math.min(maxWidth, (CURRENT_Y_MAX - CURRENT_Y_MIN) * factor));
+
+    var newMin = center - width / 2;
+    var newMax = center + width / 2;
+    // Keep the window inside the data extent — slide it back in rather than
+    // clipping asymmetrically if the center-preserving width change would
+    // push either edge past the default bounds.
+    if (newMin < DEFAULT_Y_MIN) { newMax += (DEFAULT_Y_MIN - newMin); newMin = DEFAULT_Y_MIN; }
+    if (newMax > DEFAULT_Y_MAX) { newMin -= (newMax - DEFAULT_Y_MAX); newMax = DEFAULT_Y_MAX; }
+    newMin = Math.max(DEFAULT_Y_MIN, newMin);
+    newMax = Math.min(DEFAULT_Y_MAX, newMax);
+
+    CURRENT_Y_MIN = newMin;
+    CURRENT_Y_MAX = newMax;
+    Plotly.relayout('plot', { 'yaxis.range[0]': newMin, 'yaxis.range[1]': newMax });
+}
+
+// Numeric position for each category. Plotly's own categorical axis (the
+// old approach) placed FIXED[0] at the BOTTOM and FIXED[last] at the TOP —
+// matched here directly (YPOS = array index) rather than reversed, so a
+// plain numeric axis reproduces the exact same row order. Needed as numeric
+// (not categorical) purely so the row-zoom +/- buttons and native drag/
+// scroll-zoom on Y have an actual range to operate on.
+var YPOS = {};
+FIXED.forEach(function(et, i) { YPOS[et] = i; });
 
 function renderChart(filter) {
     var events = processEvents(filterEvents(filter));
     var ref    = ALL_EVENTS.length ? new Date(ALL_EVENTS[0].start_date).getTime() : Date.now();
-    var barWidth = currentRowBarWidth();
 
     var traces = FIXED.map(function(et) {
         var te    = events.filter(function(e) { return e.event_type === et; });
         var dummy = te.length === 0;
+        var ypos  = YPOS[et];
         return {
             type:          'bar',
             orientation:   'h',
             name:          LABELS[et] || et,
             x:             dummy ? [0]   : te.map(function(e) { return e._e - e._s; }),
             base:          dummy ? [ref] : te.map(function(e) { return e._s; }),
-            y:             dummy ? [et]  : te.map(function()  { return et; }),
+            y:             dummy ? [ypos] : te.map(function() { return ypos; }),
             customdata:    dummy ? ['']  : te.map(function(e) { return buildHoverText(e); }),
             hovertemplate: dummy ? '<extra></extra>' : '%{customdata}<extra></extra>',
             textposition:  'none',
             marker:        { color: COLORS[et] || '#888', opacity: dummy ? 0 : 1 },
-            width:         dummy ? 0 : barWidth,
+            width:         dummy ? 0 : 0.8,
             showlegend:    false
         };
     });
@@ -252,18 +307,33 @@ function renderChart(filter) {
     MAX_VIEW_WIDTH = tMax - tMin;
     DEFAULT_MIN = tMin;
     DEFAULT_MAX = tMax;
+    // Preserve whatever the user already had zoomed in to (drag/scroll or
+    // the +/- buttons) across re-renders (filter switch, theme toggle) —
+    // only fall back to the full default range the very first time.
+    if (CURRENT_X_MIN === null || CURRENT_X_MAX === null) {
+        CURRENT_X_MIN = tMin; CURRENT_X_MAX = tMax;
+    }
+
+    // Six rows plus half a row of margin above/below — the widest the Y
+    // range is ever allowed to be, so "fully zoomed out" always shows
+    // exactly the six rows with no leftover blank space.
+    DEFAULT_Y_MIN = -0.5;
+    DEFAULT_Y_MAX = FIXED.length - 0.5;
+    if (CURRENT_Y_MIN === null || CURRENT_Y_MAX === null) {
+        CURRENT_Y_MIN = DEFAULT_Y_MIN; CURRENT_Y_MAX = DEFAULT_Y_MAX;
+    }
 
     var theme = themeColors();
     var layout = {
-        xaxis: { type: 'date', title: 'Time', range: [tMin, tMax],
+        xaxis: { type: 'date', title: 'Time', range: [CURRENT_X_MIN, CURRENT_X_MAX],
                  gridcolor: theme.grid, linecolor: theme.line, zerolinecolor: theme.line,
                  tickfont: { color: theme.font }, titlefont: { color: theme.font } },
         yaxis: {
-            title:         'Event Type',
-            categoryorder: 'array',
-            categoryarray: FIXED,
-            tickvals:      FIXED,
-            ticktext:      FIXED.map(function(et) { return LABELS[et] || et; }),
+            title:    'Event Type',
+            range:    [CURRENT_Y_MIN, CURRENT_Y_MAX],
+            tickmode: 'array',
+            tickvals: FIXED.map(function(et) { return YPOS[et]; }),
+            ticktext: FIXED.map(function(et) { return LABELS[et] || et; }),
             gridcolor: theme.grid, linecolor: theme.line, zerolinecolor: theme.line,
             tickfont: { color: theme.font }, titlefont: { color: theme.font }
         },
@@ -283,21 +353,21 @@ function renderChart(filter) {
     var config = {
         responsive:             true,
         displayModeBar:         true,
-        // Built-in zoomIn2d/zoomOut2d zoom the TIME (x) axis — replaced with
-        // custom +/- buttons that instead adjust vertical spacing between
-        // the 6 category rows. Drag-to-zoom and scroll-zoom still control
-        // time, unaffected.
+        // Built-in zoomIn2d/zoomOut2d zoom the TIME (x) axis, which drag/
+        // scroll already covers — replaced with custom +/- buttons that
+        // zoom the Y (event-type row) axis instead, centered on wherever
+        // the chart is currently focused.
         modeBarButtonsToRemove: ['select2d', 'lasso2d', 'zoomIn2d', 'zoomOut2d'],
         modeBarButtonsToAdd: [
             {
-                name: 'Increase row spacing',
+                name: 'Zoom in on rows',
                 icon: Plotly.Icons.zoom_plus,
-                click: function() { adjustRowSpacing(-1); }
+                click: function() { adjustYZoom(0.7); }
             },
             {
-                name: 'Decrease row spacing',
+                name: 'Zoom out on rows',
                 icon: Plotly.Icons.zoom_minus,
-                click: function() { adjustRowSpacing(1); }
+                click: function() { adjustYZoom(1 / 0.7); }
             }
         ]
     };
